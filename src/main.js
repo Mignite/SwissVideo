@@ -17,6 +17,17 @@ let lastSliderQuality = 23;
 let lastSliderBitrate = 6;
 let VideoInfoRequestSeq = 0;
 
+// Cache lazy de elementos DOM consultados frecuentemente (UpdateProgress corre 30-60 Hz).
+// Se inicializa una sola vez en DOMContentLoaded para evitar getElementById por cada progress.
+const DomCache = {};
+
+function GetEl(id) {
+    if (!DomCache[id]) {
+        DomCache[id] = document.getElementById(id);
+    }
+    return DomCache[id];
+}
+
 const CodecMeta = {
     libx264:    { label: "H.264",   family: "cpu",   hwtag: "" },
     libx265:    { label: "H.265",   family: "cpu",   hwtag: "" },
@@ -722,11 +733,11 @@ function UpdateVideoPreview(videoPath) {
 }
 
 function UpdateProgress(Data) {
-    const framesDone = document.getElementById("framesDone");
-    const speedVal = document.getElementById("speedVal");
-    const framesTotalElem = document.getElementById("framesTotal");
-    const currentSizeElem = document.getElementById("currentSize");
-    const statusDiv = document.getElementById("encodingStatus");
+    const framesDone = GetEl("framesDone");
+    const speedVal = GetEl("speedVal");
+    const framesTotalElem = GetEl("framesTotal");
+    const currentSizeElem = GetEl("currentSize");
+    const statusDiv = GetEl("encodingStatus");
 
     if (!FirstFrameReceived && (Data.frames_done > 0 || (Data.current_seconds && Data.current_seconds > 0))) {
         FirstFrameReceived = true;
@@ -1653,10 +1664,6 @@ async function ProcessQueue() {
         AddLog("❌ No se pudo iniciar la cola", "error");
         return;
     }
-
-    QueueProcessing = true;
-    document.getElementById("queueProgress").style.display = "block";
-    document.getElementById("queueTotal").textContent = FileQueue.length;
 
     QueueProcessing = true;
     document.getElementById("queueProgress").style.display = "block";

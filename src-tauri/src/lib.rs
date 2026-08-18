@@ -305,6 +305,27 @@ fn get_presets_dir(app: &AppHandle) -> PathBuf {
     config
 }
 
+// ==================== UTILIDADES DE PERSISTENCIA ====================
+
+fn atomic_write_json<T: Serialize>(path: &std::path::Path, value: &T) -> Result<(), String> {
+    use std::io::Write;
+    let data = serde_json::to_string_pretty(value).map_err(|e| e.to_string())?;
+    let tmp = path.with_extension("tmp");
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+    {
+        let mut f = std::fs::File::create(&tmp).map_err(|e| e.to_string())?;
+        f.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
+        f.sync_all().ok();
+    }
+    if let Err(e) = std::fs::rename(&tmp, path) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(e.to_string());
+    }
+    Ok(())
+}
+
 // ==================== COMANDOS TAURI ====================
 
 #[tauri::command]
@@ -1390,8 +1411,11 @@ fn save_preset(
     let mut presets = state.presets.lock().map_err(|e| e.to_string())?;
     presets.insert(name, preset);
     let path = state.presets_file.lock().map_err(|e| e.to_string())?;
-    let data = serde_json::to_string_pretty(&*presets).map_err(|e| e.to_string())?;
-    std::fs::write(&*path, &data).map_err(|e| e.to_string())?;
+    let snapshot = presets.clone();
+    drop(path);
+    drop(presets);
+    let path = state.presets_file.lock().map_err(|e| e.to_string())?;
+    atomic_write_json(&*path, &snapshot)?;
     Ok(())
 }
 
@@ -1399,20 +1423,22 @@ fn save_preset(
 fn delete_preset(state: State<'_, AppState>, name: String) -> Result<(), String> {
     let mut presets = state.presets.lock().map_err(|e| e.to_string())?;
     presets.remove(&name);
+    let snapshot = presets.clone();
+    drop(presets);
     let path = state.presets_file.lock().map_err(|e| e.to_string())?;
-    let data = serde_json::to_string_pretty(&*presets).map_err(|e| e.to_string())?;
-    std::fs::write(&*path, &data).map_err(|e| e.to_string())?;
+    atomic_write_json(&*path, &snapshot)?;
     Ok(())
 }
 
 #[tauri::command]
 fn reset_default_presets(state: State<'_, AppState>) -> Result<HashMap<String, Preset>, String> {
     let defaults = default_presets();
-    let mut presets = state.presets.lock().map_err(|e| e.to_string())?;
-    *presets = defaults.clone();
+    {
+        let mut presets = state.presets.lock().map_err(|e| e.to_string())?;
+        *presets = defaults.clone();
+    }
     let path = state.presets_file.lock().map_err(|e| e.to_string())?;
-    let data = serde_json::to_string_pretty(&*presets).map_err(|e| e.to_string())?;
-    std::fs::write(&*path, &data).map_err(|e| e.to_string())?;
+    atomic_write_json(&*path, &defaults)?;
     Ok(defaults)
 }
 
@@ -1443,17 +1469,86 @@ fn record_history(state: &AppState, entry: HistoryEntry) {
     };
     history.insert(0, entry);
     history.truncate(50);
-    if let Ok(data) = serde_json::to_string_pretty(&history) {
-        let _ = std::fs::write(&path, &data);
-    }
+    let _ = atomic_write_json(&path, &history);
 }
 
 #[tauri::command]
 fn save_codec_usage(state: State<'_, AppState>, usage: HashMap<String, u32>) -> Result<(), String> {
     let path = state.usage_file.lock().map_err(|e| e.to_string())?;
-    let data = serde_json::to_string_pretty(&usage).map_err(|e| e.to_string())?;
-    std::fs::write(&*path, &data).map_err(|e| e.to_string())?;
+    atomic_write_json(&*path, &usage)?;
     Ok(())
+}
+
+// ==================== TESTS ====================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeMap;
+    use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
+
+    static TEST_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    fn temp_path(suffix: &str) -> std::path::PathBuf {
+        let n = TEST_COUNTER.fetch_add(1, AtomicOrdering::Relaxed);
+        let pid = std::process::id();
+        std::env::temp_dir().join(format!("swissvideo_test_{}_{}_{}", pid, n, suffix))
+    }
+
+    #[test]
+    fn atomic_write_json_creates_file_when_missing() {
+        let path = temp_path("atomic_create.json");
+        let _ = std::fs::remove_file(&path);
+        let mut map = BTreeMap::new();
+        map.insert("k1".to_string(), "v1".to_string());
+        atomic_write_json(&path, &map).expect("write should succeed");
+        let read = std::fs::read_to_string(&path).expect("file must exist");
+        assert!(read.contains("k1"));
+    }
+
+    #[test]
+    fn atomic_write_json_overwrites_existing_file() {
+        let path = temp_path("atomic_overwrite.json");
+        std::fs::write(&path, r#"{"old":"content"}"#).unwrap();
+        let mut map = BTreeMap::new();
+        map.insert("new".to_string(), "value".to_string());
+        atomic_write_json(&path, &map).expect("overwrite should succeed");
+        let read = std::fs::read_to_string(&path).expect("file must exist");
+        assert!(read.contains("new"));
+        assert!(!read.contains("old"));
+    }
+
+    #[test]
+    fn atomic_write_json_does_not_leave_tmp_file_on_success() {
+        let path = temp_path("atomic_cleanup.json");
+        let _ = std::fs::remove_file(&path);
+        let map: BTreeMap<String, String> = BTreeMap::new();
+        atomic_write_json(&path, &map).expect("write should succeed");
+        let tmp = path.with_extension("tmp");
+        assert!(!tmp.exists(), "tmp file must be cleaned up after rename");
+    }
+
+    #[test]
+    fn parse_ffmpeg_progress_parses_typical_line() {
+        let line = "frame=  120 fps=58 q=28.0 size=    2048kB time=00:00:04.00 bitrate=4194.3kbits/s speed=1.95x";
+        let parsed = parse_ffmpeg_progress(line).expect("must parse");
+        let obj = parsed.as_object().expect("must be object");
+        assert_eq!(obj.get("frames_done").and_then(|v| v.as_u64()), Some(120));
+        assert!(obj.get("encode_fps").and_then(|v| v.as_f64()).unwrap() > 50.0);
+        assert!(obj.get("speed").and_then(|v| v.as_f64()).unwrap() > 1.0);
+        assert!(obj.get("current_seconds").and_then(|v| v.as_f64()).unwrap() > 3.9);
+    }
+
+    #[test]
+    fn parse_ffmpeg_progress_ignores_non_progress_lines() {
+        let line = "Stream mapping: Stream #0:0 -> #0:0";
+        assert!(parse_ffmpeg_progress(line).is_none());
+    }
+
+    #[test]
+    fn parse_ffmpeg_progress_returns_none_for_empty() {
+        assert!(parse_ffmpeg_progress("").is_none());
+    }
 }
 
 // ==================== RUN ====================
@@ -1473,8 +1568,7 @@ pub fn run() {
                 serde_json::from_str(&data).unwrap_or_else(|_| default_presets())
             } else {
                 let defaults = default_presets();
-                let data = serde_json::to_string_pretty(&defaults).unwrap();
-                std::fs::write(&presets_file, &data).ok();
+                atomic_write_json(&presets_file, &defaults).ok();
                 defaults
             };
 
