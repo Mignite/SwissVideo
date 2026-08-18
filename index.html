@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwissVideo - Compresor Profesional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+<div class="App">
+
+<div class="MainGrid">
+
+  <!-- COLUMNA IZQUIERDA -->
+  <div class="Col">
+    <div class="Dropzone" id="dropzone">
+      <div class="DzIcon">＋</div>
+      <div class="DzTitle">Archivos para comprimir</div>
+      <div class="DzSub">
+        <button id="selectFilesBtn" class="EncodeBtn" style="width:auto;padding:7px 18px;font-size:12px;margin-top:10px">Seleccionar Videos</button>
+        <br><br>MP4 · MKV · MOV · AVI · WEBM
+      </div>
+    </div>
+
+    <div class="Card">
+      <div class="QueueHeader CardHd">
+        <span>Cola de procesamiento</span>
+        <label class="CheckRow" style="margin-top:0">
+          <input type="checkbox" id="batchModeCheck"> Modo lote
+        </label>
+      </div>
+      <div class="QueueEmpty" id="queueList">
+        Sin archivos — usá "Seleccionar Videos"
+      </div>
+      <div class="QueueProgress" id="queueProgress" style="display:none">
+        Video <span id="queueCurrent">0</span>/<span id="queueTotal">0</span>
+      </div>
+    </div>
+
+    <div class="Accordion">
+      <button class="AccordionHeader" id="historyHeader">
+        <span>Historial</span>
+        <span class="AccordionStats" id="historyStats">Ahorro: 0 MB</span>
+      </button>
+      <div class="AccordionPanel" id="historyList" style="display:none">
+        <div class="Placeholder">Sin historial aún</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLUMNA CENTRAL -->
+  <div class="Col">
+    <div class="Card">
+      <div class="CardHd">
+        <span>Presets rápidos</span>
+        <button class="CardHdAction" id="openPresetManagerBtn">Gestionar</button>
+      </div>
+      <div class="PresetsBar" id="presetsBar"></div>
+      <div id="activePresetIndicator" class="Placeholder" style="display:none;margin-top:8px;text-align:center">Usando preset personalizado</div>
+    </div>
+
+    <div class="Card">
+      <div class="CardHd">Codec de video</div>
+      <div class="CodecRow" id="codecRow"></div>
+    </div>
+
+    <div class="Card">
+      <div class="CardHd">Calidad y parámetros</div>
+      <div class="Prow">
+        <span class="Plbl">Control</span>
+        <div class="RateCtrl" id="rateCtrl">
+          <span class="RateOpt on" data-rc="cq">CQ</span>
+          <span class="RateOpt" data-rc="vbr">VBR</span>
+          <span class="RateOpt" data-rc="cbr">CBR</span>
+        </div>
+      </div>
+      <div class="Prow">
+        <span class="Plbl" id="qualityLabel">Calidad (CRF)</span>
+        <input type="range" id="qualitySlider" min="0" max="51" value="23">
+        <span class="Pval" id="qualityVal">23</span>
+      </div>
+      <div class="Prow">
+        <span class="Plbl">Preset</span>
+        <input type="range" id="presetSlider" min="0" max="8" value="4">
+        <span class="Pval" id="presetVal">fast</span>
+      </div>
+      <div class="Prow">
+        <span class="Plbl">Resolución</span>
+        <select id="resolutionSelect">
+          <option value="original">Original</option>
+          <option value="3840x2160">4K (3840x2160)</option>
+          <option value="2560x1440">2K (2560x1440)</option>
+          <option value="1920x1080">1080p</option>
+          <option value="1280x720">720p</option>
+          <option value="854x480">480p</option>
+        </select>
+      </div>
+      <div class="Prow">
+        <span class="Plbl">FPS</span>
+        <select id="fpsSelect">
+          <option value="original">Original</option>
+          <option value="60">60 fps</option>
+          <option value="30">30 fps</option>
+          <option value="24">24 fps</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="Card">
+      <div class="CardHd">Pistas de audio</div>
+      <div id="audioTracksContainer"></div>
+      <label class="CheckRow">
+        <input type="checkbox" id="customMixCheck"> Normalizar volumen al mezclar
+      </label>
+    </div>
+
+    <div class="Card">
+      <div class="CardHd">Corte</div>
+      <div class="CutModes">
+        <button class="CutMode on" id="cutFullBtn">Video completo</button>
+        <button class="CutMode" id="cutCustomBtn">Personalizado</button>
+      </div>
+      <div id="cutFullPane">
+        <div class="CutTimeRow">
+          <span>Inicio: 00:00:00</span>
+          <span>Fin: <span id="fullEndTime">00:00:00</span></span>
+        </div>
+      </div>
+      <div id="cutCustomPane" style="display:none">
+        <div class="CutTimeRow">
+          <span>Inicio:</span>
+          <input type="text" id="cutStart" class="TimeInput" value="00:00:00">
+          <span>Fin:</span>
+          <input type="text" id="cutEnd" class="TimeInput" value="00:00:00">
+        </div>
+      </div>
+    </div>
+
+    <div class="Card">
+      <div class="CardHd">Nombre del archivo</div>
+      <div class="NameTpls">
+        <span class="Tpl" data-token="{nombre}">{nombre}</span>
+        <span class="Tpl" data-token="{codec}">{codec}</span>
+        <span class="Tpl" data-token="{qp}">{qp}</span>
+        <span class="Tpl" data-token="{res}">{res}</span>
+        <span class="Tpl" data-token="{fps}">{fps}</span>
+        <span class="Tpl" data-token="{fecha}">{fecha}</span>
+      </div>
+      <input type="text" id="nameTemplate" class="NameField" value="{nombre}_{codec}_q{qp}">
+      <div class="NamePreview">Preview: <span id="namePreview">...</span></div>
+    </div>
+
+    <div class="Card">
+      <div class="CardHd">Destino</div>
+      <div class="DirRow">
+        <input type="text" id="destPath" class="DirInp" placeholder="Carpeta destino">
+        <button id="browseDestBtn">Examinar</button>
+      </div>
+      <label class="CheckRow">
+        <input type="checkbox" id="sameFolderCheck"> Misma carpeta que el origen
+      </label>
+    </div>
+  </div>
+
+  <!-- COLUMNA DERECHA -->
+  <div class="Col">
+    <div class="Card">
+      <div class="InfoRow"><span class="InfoLabel">Archivo</span><span class="InfoValue" id="infoName">-</span></div>
+      <div class="InfoRow"><span class="InfoLabel">Duración</span><span class="InfoValue" id="infoDuration">-</span></div>
+      <div class="InfoRow"><span class="InfoLabel">Resolución</span><span class="InfoValue" id="infoRes">-</span></div>
+      <div class="InfoRow"><span class="InfoLabel">FPS</span><span class="InfoValue" id="infoFps">-</span></div>
+      <div class="InfoRow"><span class="InfoLabel">Tamaño</span><span class="InfoValue" id="infoSize">-</span></div>
+    </div>
+
+    <div class="PreviewBox">
+      <video id="previewVideo" class="PreviewVideo" controls preload="metadata">
+        <source id="previewSource" src="">
+      </video>
+      <div id="videoPlaceholder" class="PreviewPlaceholder">
+        <span>▶</span>
+        <span>Seleccioná un video</span>
+      </div>
+    </div>
+
+    <div class="CutInlineBox" id="cutInlineBox" style="display:none">
+      <div class="CutInlineHd">
+        <span>Seleccionar corte</span>
+        <button class="ModalClose" id="playerCloseBtn">✕</button>
+      </div>
+      <div class="PlayerTimelineWrap" id="playerTimeline">
+        <div class="playerTimelineTrack">
+          <div class="playerFill" id="playerFill"></div>
+          <div class="playerSelection" id="playerSelection"></div>
+          <div class="marker markerStart" id="markerStart">
+            <span class="markerLabel" id="markerStartTime">--:--:--</span>
+          </div>
+          <div class="marker markerEnd" id="markerEnd">
+            <span class="markerLabel" id="markerEndTime">--:--:--</span>
+          </div>
+          <div class="playerThumb" id="playerThumb"></div>
+        </div>
+      </div>
+      <div class="PlayerControls">
+        <button class="PlayerBtn playpause" id="playerPlayBtn">▶ Play</button>
+        <span id="playerTimeDisplay">00:00:00 / 00:00:00</span>
+      </div>
+      <div class="PlayerMarkRow">
+        <button class="PlayerMarkBtn" id="markStartBtn">
+          <span>Marcar inicio</span>
+          <span id="markStartTime">--:--:--</span>
+        </button>
+        <button class="PlayerMarkBtn" id="markEndBtn">
+          <span>Marcar fin</span>
+          <span id="markEndTime">--:--:--</span>
+        </button>
+      </div>
+      <button class="PlayerConfirmBtn" id="playerConfirmBtn">Confirmar corte</button>
+    </div>
+
+    <div class="EncodeContainer">
+      <button class="EncodeBtn" id="encodeBtn">Comprimir video</button>
+      <button class="StopBtn" id="stopBtn" style="display:none">Detener</button>
+      <div id="sizeWarningContainer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BARRA INFERIOR -->
+<div class="BottomBar">
+  <div id="encodingStatus" class="EncodingStatus"></div>
+  <div class="ProgBar"><div class="ProgFill" id="progressFill"></div></div>
+  <div class="StatsRow">
+    <span>Frames: <span id="framesDone">0</span> / <span id="framesTotal">0</span></span>
+    <span>Velocidad: <span id="speedVal">0</span> fps</span>
+    <span>ETA: <span id="etaVal">--:--</span></span>
+    <span>Tamaño: <span id="currentSize">0</span> MB</span>
+  </div>
+</div>
+
+<div class="LogBar">
+  <div class="LogHd" id="logHeader">
+    <div class="Ldot" id="logDot"></div>
+    <div class="LogPreview" id="logPreview">Conectando al backend...</div>
+    <div class="LogChevron" id="logChevron">▲</div>
+  </div>
+  <div class="LogBody" id="logBody"></div>
+</div>
+
+<!-- MODAL GESTOR DE PRESETS -->
+<div class="ModalOverlay" id="presetManagerModal">
+  <div class="Modal">
+    <div class="ModalHd">
+      <span>Gestor de presets</span>
+      <button class="ModalClose" id="closeManagerModal">✕</button>
+    </div>
+    <div class="ModalBody">
+      <div class="ModalActions">
+        <button id="createNewPresetBtn">Nuevo preset</button>
+        <button id="importPresetsManagerBtn">Importar</button>
+        <button id="exportAllPresetsManagerBtn">Exportar</button>
+        <button id="resetDefaultPresetsBtn" style="color:var(--Accent)">Restaurar</button>
+      </div>
+      <div id="presetsListContainer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PRESET -->
+<div class="ModalOverlay" id="presetEditModal">
+  <div class="Modal">
+    <div class="ModalHd">
+      <span id="presetEditTitle">Crear nuevo preset</span>
+      <button class="ModalClose" id="closeEditModal">✕</button>
+    </div>
+    <div class="ModalBody">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="font-size:10px;color:var(--Text4);text-transform:uppercase;letter-spacing:0.5px">Nombre</label>
+        <input type="text" id="editPresetName" class="NameField" placeholder="Ej: Discord 8MB" maxlength="40">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="font-size:10px;color:var(--Text4);text-transform:uppercase;letter-spacing:0.5px">Descripción (opcional)</label>
+        <input type="text" id="editPresetDesc" class="NameField" placeholder="Ej: Para subir a Discord">
+      </div>
+      <div style="font-size:10px;color:var(--Text3);background:var(--Panel2);border-radius:6px;padding:8px 10px;line-height:1.6" id="presetPreview">—</div>
+      <button class="CardHdAction" id="confirmSavePresetBtn" style="width:100%;text-align:center;padding:9px;color:var(--Accent);border-color:var(--Accent)">Guardar preset</button>
+      <button class="CardHdAction" id="cancelEditPresetBtn" style="width:100%;text-align:center">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ARCHIVO DUPLICADO -->
+<div class="ModalOverlay" id="collisionModal">
+  <div class="Modal">
+    <div class="ModalHd">
+      <span>El archivo ya existe</span>
+      <button class="ModalClose" id="collisionCloseBtn">✕</button>
+    </div>
+    <div class="ModalBody">
+      <div style="font-size:12px;color:var(--Text3);line-height:1.6">
+        Ya existe un archivo con el nombre
+        <b id="collisionFileName" style="color:var(--Text);font-family:monospace"></b>.<br>
+        ¿Qué querés hacer?
+      </div>
+      <button class="CardHdAction" id="collisionRenameBtn" style="width:100%;text-align:center;padding:9px;color:var(--Accent);border-color:var(--Accent)">
+        Guardar como <span id="collisionNewName"></span>
+      </button>
+      <button class="PlayerConfirmBtn" id="collisionOverwriteBtn">Reescribir el archivo existente</button>
+      <button class="CardHdAction" id="collisionCancelBtn" style="width:100%;text-align:center">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DROP OVERLAY -->
+<div id="dropOverlay" class="DropOverlay">
+  <p>Soltá los videos para añadirlos a la cola</p>
+</div>
+
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

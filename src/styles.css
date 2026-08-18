@@ -1,0 +1,471 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --Accent: #E85D4E;
+  --AccentBlue: #4EA8E8;
+  --AccentGreen: #7ED957;
+  --AccentYellow: #E8C34E;
+  --AccentPurple: #B980E8;
+  --AccentTeal: #4EE8C3;
+
+  --Panel: #1a1a20;
+  --Panel2: #1f1f26;
+  --Border: #26262f;
+  --BorderStrong: #33333d;
+
+  --Text: #e8e8ec;
+  --Text2: #b0b0b8;
+  --Text3: #8a8a94;
+  --Text4: #6a6a74;
+  --Text5: #55555f;
+}
+
+body {
+  margin: 0 !important;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--Text);
+  background: #15151a;
+  height: 100vh;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--BorderStrong); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--Text5); }
+
+.App {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== TITLEBAR ===== */
+
+
+
+
+/* ===== GRID PRINCIPAL ===== */
+.MainGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  gap: 14px;
+  flex: 1;
+  padding: 14px;
+  overflow: hidden;
+  min-height: 0;
+}
+.Col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+/* ===== TARJETAS ===== */
+.Card {
+  background: var(--Panel);
+  border-radius: 10px;
+  padding: 14px;
+  flex-shrink: 0;
+}
+.CardHd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--Text3);
+  margin-bottom: 12px;
+}
+.CardHdAction {
+  font-size: 11px; font-weight: 500;
+  text-transform: none; letter-spacing: 0;
+  color: var(--Text3);
+  background: transparent;
+  border: 1px solid var(--BorderStrong);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.CardHdAction:hover { border-color: var(--Accent); color: var(--Text); }
+
+/* ===== DROPZONE ===== */
+.Dropzone {
+  border: 1px dashed var(--BorderStrong);
+  border-radius: 10px;
+  padding: 22px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+  flex-shrink: 0;
+}
+.Dropzone:hover, .Dropzone.over {
+  border-color: var(--Accent);
+  background: rgba(232, 93, 78, 0.06);
+}
+.DzIcon { font-size: 22px; margin-bottom: 6px; opacity: 0.8; }
+.DzTitle { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.DzSub { font-size: 11px; color: var(--Text4); }
+
+/* ===== COLA ===== */
+.QueueHeader { display: flex; justify-content: space-between; align-items: center; }
+.QueueEmpty { text-align: center; color: var(--Text5); font-size: 12px; padding: 16px 4px; }
+.QueueItem {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px;
+  border-left: 3px solid transparent;
+  margin-top: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.QueueItem:hover { background: #22222a; }
+.QueueItem.active { background: var(--Border); border-left-color: var(--Accent); }
+.QueueItemName { flex: 1; min-width: 0; font-size: 12px; color: var(--Text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.QueueItemStatus { font-size: 10px; color: var(--Text4); flex-shrink: 0; }
+.QueueItemRemove {
+  flex-shrink: 0;
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--Text4);
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.QueueItemRemove:hover { opacity: 1; background: rgba(232, 93, 78, 0.16); color: var(--Accent); }
+.QueueProgress { font-size: 11px; color: var(--Text3); padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--Border); }
+
+/* ===== HISTORIAL (acordeón) ===== */
+.Accordion { background: var(--Panel2); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+.AccordionHeader {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  background: transparent; border: none;
+  padding: 9px 12px; font-size: 12px; font-weight: 600;
+  color: var(--Text2); cursor: pointer; transition: background-color 0.2s;
+}
+.AccordionHeader:hover { background: var(--Border); }
+.AccordionStats { font-size: 10px; font-weight: 500; color: var(--AccentGreen); }
+.AccordionPanel { padding: 8px 12px 12px; border-top: 1px solid var(--BorderStrong); max-height: 220px; overflow-y: auto; }
+.HistoryItem { padding: 6px 0; border-bottom: 1px solid var(--Border); font-size: 11px; }
+.HistoryItem:last-child { border-bottom: none; }
+.HistoryItemName { font-family: monospace; color: var(--Text2); margin-bottom: 2px; }
+.HistoryItemDetails { display: flex; gap: 10px; color: var(--Text4); }
+.HistorySaved { color: var(--AccentGreen); }
+
+/* ===== PRESETS ===== */
+.PresetsBar { display: flex; gap: 8px; flex-wrap: wrap; }
+.PresetChip {
+  background: transparent;
+  border: 1px dashed var(--BorderStrong);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 11px;
+  color: var(--Text3);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.PresetChip:hover { border-color: var(--Accent); color: var(--Text); }
+.PresetChip.active { border-style: solid; border-color: var(--Accent); color: var(--Accent); }
+
+/* ===== CODEC ===== */
+.CodecRow { padding: 0; }
+.CodecFamily { display: flex; align-items: center; justify-content: space-between; padding: 3px 0; }
+.CodecFamily + .CodecFamily { border-top: 1px solid var(--Border); }
+.CodecFamLabel { font-size: 12px; font-weight: 600; color: var(--Text2); }
+.CodecFamOpts { display: flex; gap: 4px; }
+.CodecOpt {
+  padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  border: 1px solid var(--BorderStrong); background: var(--Panel2); color: var(--Text3);
+  cursor: pointer; user-select: none; transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.CodecOpt:hover { border-color: var(--Text5); color: var(--Text); }
+.CodecOpt.on { border-color: var(--Accent); color: var(--Accent); background: var(--AccentDim); }
+.Cbtn {
+  position: relative;
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--BorderStrong);
+  background: var(--Panel2);
+  color: var(--Text3);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.Cbtn:hover { color: var(--Text); border-color: var(--Text5); }
+.Cbtn.on { border-color: var(--Accent); color: var(--Accent); }
+
+/* ===== PARÁMETROS ===== */
+.Prow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.Prow:last-child { margin-bottom: 0; }
+.Plbl { font-size: 12px; color: var(--Text3); min-width: 78px; flex-shrink: 0; }
+.Pval { font-family: monospace; font-size: 12px; color: var(--Text2); min-width: 40px; text-align: right; flex-shrink: 0; }
+input[type=range] {
+  -webkit-appearance: none; flex: 1; height: 3px;
+  border-radius: 3px; background: var(--BorderStrong); outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 13px; height: 13px;
+  border-radius: 50%; background: var(--Accent);
+  cursor: pointer; border: 2px solid #15151a;
+}
+select, .Sel {
+  background: var(--Panel2); border: 1px solid var(--BorderStrong);
+  border-radius: 8px; color: var(--Text);
+  padding: 7px 10px; font-size: 12px; cursor: pointer;
+  transition: border-color 0.2s;
+}
+select:hover, select:focus { border-color: var(--Accent); outline: none; }
+
+/* ===== AUDIO ===== */
+.TrackRow { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--Text2); padding: 4px 0; }
+
+/* ===== CORTE ===== */
+.CutModes { display: flex; gap: 8px; margin-bottom: 10px; }
+.CutMode {
+  flex: 1; padding: 7px 10px; border-radius: 8px;
+  border: 1px solid var(--BorderStrong);
+  background: var(--Panel2); color: var(--Text3);
+  font-size: 12px; cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.CutMode.on { border-color: var(--Accent); color: var(--Accent); }
+.RateCtrl { display: flex; gap: 4px; }
+.RateOpt {
+  padding: 2px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  border: 1px solid var(--BorderStrong); background: var(--Panel2); color: var(--Text3);
+  cursor: pointer; user-select: none;
+}
+.RateOpt:hover { border-color: var(--Text5); color: var(--Text); }
+.RateOpt.on { border-color: var(--Accent); color: var(--Accent); background: var(--AccentDim); }
+.CutTimeRow { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--Text3); }
+.TimeInput {
+  width: 100px; text-align: center; font-family: monospace;
+  background: var(--Panel2); border: 1px solid var(--BorderStrong);
+  border-radius: 8px; padding: 7px 6px;
+  color: var(--Text); font-size: 12px;
+}
+
+/* ===== NOMBRE ARCHIVO ===== */
+.NameTpls { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.Tpl {
+  font-family: monospace; font-size: 10px;
+  color: var(--AccentBlue);
+  background: var(--Panel2); border: 1px solid var(--BorderStrong);
+  border-radius: 5px; padding: 3px 7px; cursor: pointer;
+}
+.Tpl:hover { border-color: var(--AccentBlue); }
+.NameField {
+  width: 100%; background: var(--Panel2);
+  border: 1px solid var(--BorderStrong); border-radius: 8px;
+  padding: 8px 10px; color: var(--Text);
+  font-family: monospace; font-size: 12px;
+}
+.NamePreview { font-size: 11px; color: var(--Text4); margin-top: 6px; }
+.NamePreview span { color: var(--Text2); }
+
+/* ===== DESTINO ===== */
+.DirRow { display: flex; gap: 8px; }
+.DirInp {
+  flex: 1; min-width: 0; background: var(--Panel2);
+  border: 1px solid var(--BorderStrong); border-radius: 8px;
+  padding: 8px 10px; color: var(--Text); font-size: 12px;
+}
+.CheckRow { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--Text3); }
+
+/* ===== INFO / PREVIEW / ACCIÓN ===== */
+.InfoRow { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--Border); }
+.InfoRow:last-child { border-bottom: none; }
+.InfoLabel { color: var(--Text4); }
+.InfoValue { color: var(--Text2); font-family: monospace; }
+.PreviewBox {
+  background: #000; border-radius: 10px;
+  aspect-ratio: 16 / 9;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden; flex-shrink: 0;
+}
+.PreviewVideo { width: 100%; height: 100%; object-fit: contain; }
+.PreviewPlaceholder {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+  color: var(--Text5); pointer-events: none;
+}
+.PreviewPlaceholder span:first-child { font-size: 26px; opacity: 0.6; }
+.PreviewPlaceholder span:last-child { font-size: 11px; }
+
+.EncodeContainer { margin-top: auto; flex-shrink: 0; }
+.EncodeBtn {
+  width: 100%; padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--Accent);
+  background: rgba(232, 93, 78, 0.12);
+  color: var(--Accent);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background-color 0.2s;
+}
+.EncodeBtn:hover { background: rgba(232, 93, 78, 0.2); }
+.EncodeBtn:disabled { opacity: 0.4; cursor: default; }
+.StopBtn {
+  width: 100%; padding: 10px; border-radius: 10px;
+  border: 1px solid var(--BorderStrong); background: transparent;
+  color: var(--Text3); font-size: 12px; cursor: pointer; margin-top: 8px;
+}
+.StopBtn:hover { border-color: var(--Accent); color: var(--Accent); }
+
+/* ===== BARRA INFERIOR ===== */
+.BottomBar { flex-shrink: 0; padding: 0 14px 10px; }
+.EncodingStatus { font-size: 11px; color: var(--Text4); text-align: center; margin-bottom: 6px; }
+.ProgBar { width: 100%; height: 5px; background: var(--Panel2); border-radius: 3px; overflow: hidden; }
+.ProgFill { height: 100%; background: var(--Accent); border-radius: 3px; transition: width 0.2s ease; }
+.StatsRow { display: flex; justify-content: center; gap: 18px; font-size: 11px; color: var(--Text4); margin-top: 6px; flex-wrap: wrap; }
+.StatsRow span span { color: var(--Text2); font-family: monospace; }
+
+.LogBar {
+  flex-shrink: 0;
+  margin: 0 14px 14px;
+  background: var(--Panel);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.LogHd { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; }
+.Ldot { width: 7px; height: 7px; border-radius: 50%; background: var(--Text5); flex-shrink: 0; }
+.Ldot.active { background: var(--AccentGreen); }
+.LogPreview { flex: 1; font-size: 11px; color: var(--Text4); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.LogChevron { font-size: 10px; color: var(--Text5); flex-shrink: 0; }
+.LogBody { max-height: 0; overflow-y: auto; transition: max-height 0.25s ease; border-top: 1px solid transparent; }
+.LogBody.open { max-height: 180px; border-top: 1px solid var(--Border); padding: 8px 12px; }
+.LogLine { font-family: monospace; font-size: 11px; color: var(--Text4); padding: 2px 0; }
+.LogLine.success { color: var(--AccentGreen); }
+.LogLine.error { color: var(--Accent); }
+.LogLine.info { color: var(--AccentBlue); }
+
+/* ===== MODALES ===== */
+.ModalOverlay {
+  position: fixed; inset: 0;
+  background: rgba(10, 10, 12, 0.65);
+  display: none; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.ModalOverlay.open, .ModalOverlay[style*="flex"] { display: flex; }
+.Modal {
+  background: var(--Panel);
+  border-radius: 12px;
+  width: 480px;
+  max-width: 92vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 0;
+}
+.ModalWide { width: 700px; }
+.ModalHd {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--Border);
+  font-size: 13px; font-weight: 600; color: var(--Text);
+}
+.ModalClose { background: transparent; border: none; color: var(--Text4); font-size: 14px; cursor: pointer; padding: 2px 6px; }
+.ModalClose:hover { color: var(--Accent); }
+.ModalBody { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.ModalActions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Reproductor */
+.CutInlineBox {
+  display: flex; flex-direction: column; gap: 12px;
+  background: var(--Panel); border: 1px solid var(--BorderStrong);
+  border-radius: 10px; padding: 14px; margin-top: 12px; flex-shrink: 0;
+}
+.CutInlineHd {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; font-weight: 600; color: var(--Text);
+  padding-bottom: 6px; border-bottom: 1px solid var(--Border);
+}
+.PlayerVideoWrap { background: #000; border-radius: 8px; aspect-ratio: 16/9; overflow: hidden; }
+.PlayerVideoWrap video { width: 100%; height: 100%; }
+.PlayerTimelineWrap { position: relative; height: 44px; background: var(--Panel2); border-radius: 6px; cursor: pointer; }
+.playerTimelineTrack { position: relative; width: 100%; height: 100%; }
+.playerFill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--Accent); opacity: 0.3; border-radius: 6px; pointer-events: none; }
+.playerThumb { position: absolute; top: 50%; left: 0%; width: 12px; height: 12px; background: var(--Accent); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; box-shadow: 0 0 4px rgba(0,0,0,0.5); }
+.playerSelection { position: absolute; top: 0; height: 100%; background: var(--Accent); opacity: 0.15; pointer-events: none; display: none; z-index: 2; }
+.marker { position: absolute; top: 0; height: 100%; width: 3px; background: var(--Accent); pointer-events: none; display: none; z-index: 3; }
+.markerStart { background: #4caf50; }
+.markerEnd { background: #f44336; }
+.markerLabel { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--Text3); white-space: nowrap; padding: 1px 4px; background: var(--Panel1); border-radius: 3px; margin-bottom: 2px; }
+.PlayerControls { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--Text3); }
+.PlayerBtn { background: var(--Panel2); border: 1px solid var(--BorderStrong); border-radius: 8px; padding: 8px 16px; color: var(--Text); cursor: pointer; }
+.PlayerBtn:hover { border-color: var(--Accent); }
+.PlayerMarkRow { display: flex; gap: 10px; margin-top: 2px; }
+.PlayerMarkBtn {
+  flex: 1; display: flex; justify-content: space-between;
+  padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--BorderStrong);
+  background: var(--Panel2); font-size: 11px; color: var(--Text3); cursor: pointer;
+}
+.PlayerMarkBtn:hover { border-color: var(--Accent); }
+.PlayerConfirmBtn {
+  width: 100%; padding: 10px; border-radius: 8px;
+  border: 1px solid var(--Accent);
+  background: rgba(232, 93, 78, 0.12);
+  color: var(--Accent); font-weight: 600; cursor: pointer;
+}
+
+/* ===== BOTONES GENERALES ===== */
+button {
+  border-radius: 8px;
+  border: 1px solid var(--BorderStrong);
+  padding: 0.5em 1em;
+  font-size: 0.9em;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--Text);
+  background-color: var(--Panel2);
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+button:hover { border-color: var(--Accent); }
+
+.Placeholder { color: var(--Text4); font-size: 12px; }
+
+/* ===== DROP OVERLAY ===== */
+.DropOverlay {
+  position: fixed; inset: 0;
+  background: rgba(232, 93, 78, 0.12);
+  border: 3px dashed var(--Accent);
+  z-index: 200;
+  display: none; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.DropOverlay.visible { display: flex; }
+.DropOverlay p {
+  background: var(--Panel);
+  padding: 14px 22px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1100px) {
+  .MainGrid { grid-template-columns: 1fr 1fr; }
+  .Col:nth-child(3) { grid-column: span 2; }
+}
+@media (max-width: 720px) {
+  .MainGrid { grid-template-columns: 1fr; overflow-y: auto; }
+  .Col:nth-child(3) { grid-column: span 1; }
+  .App { height: auto; min-height: 100vh; }
+}

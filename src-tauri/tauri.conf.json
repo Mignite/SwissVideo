@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicedayzhu/tauri-v2-schemas/main/tauri.conf.schema.json",
+  "productName": "SwissVideo V2",
+  "version": "2.0.0",
+  "identifier": "com.swissvideo.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "SwissVideo V2",
+        "width": 1400,
+        "height": 900,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.ico"]
+  }
+}
