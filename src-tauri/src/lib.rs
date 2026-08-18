@@ -586,7 +586,8 @@ fn process_name_template(
 }
 
 fn parse_ffmpeg_time(time_str: &str) -> f64 {
-    let parts: Vec<&str> = time_str.split(':').collect();
+    let clean_str = time_str.replace(',', ".");
+    let parts: Vec<&str> = clean_str.split(':').collect();
     if parts.len() == 3 {
         let h: f64 = parts[0].parse().unwrap_or(0.0);
         let m: f64 = parts[1].parse().unwrap_or(0.0);
@@ -717,7 +718,7 @@ fn calcular_output_path(params: &EncodeParams) -> Result<String, String> {
         ),
     };
 
-    let is_vp9 = params.codec == "libvpx-vp9";
+    let is_vp9 = params.codec == "libvpx-vp9" || params.codec == "libvpx_vp9";
     let ext = if is_vp9 { "webm" } else { "mp4" };
     Ok(std::path::Path::new(&output_dir)
         .join(format!("{}.{}", output_name, ext))
@@ -786,35 +787,38 @@ fn build_and_spawn(params: &EncodeParams, ffmpeg: &str) -> Result<(std::process:
         .arg("0:v:0");
 
     // Pistas de audio seleccionadas (índice 0-based, coincide con "0:a:N" de ffmpeg)
-    let selected_tracks: Vec<u32> = params.audio_tracks.clone().unwrap_or_default();
     let mix_down = params.custom_mix.unwrap_or(false);
     let mut audio_filter_label: Option<&str> = None;
 
-    if selected_tracks.len() > 1 && mix_down {
-        // Varias pistas + "normalizar volumen al mezclar" -> mezclarlas en una sola
-        // selected_tracks contiene índices globales de stream (ffprobe "index"),
-        // por lo que usamos 0:N (global) en lugar de 0:a:N (audio-relativo).
-        let inputs: String = selected_tracks
-            .iter()
-            .map(|t| format!("[0:{}]", t))
-            .collect();
-        let filter = format!(
-            "{}amix=inputs={}:duration=longest:normalize=1[aout]",
-            inputs,
-            selected_tracks.len()
-        );
-        cmd.args(["-filter_complex", &filter]);
-        audio_filter_label = Some("[aout]");
-    } else if !selected_tracks.is_empty() {
-        // Una pista, o varias sin mezclar -> cada una como stream de audio separado.
-        // Usamos el índice global del stream (0:N) porque Track.index de ffprobe
-        // es el índice absoluto, no el relativo entre pistas de audio.
-        for track in &selected_tracks {
-            cmd.arg("-map").arg(format!("0:{}", track));
+    if let Some(ref selected_tracks) = params.audio_tracks {
+        if selected_tracks.len() > 1 && mix_down {
+            // Varias pistas + "normalizar volumen al mezclar" -> mezclarlas en una sola
+            // selected_tracks contiene índices globales de stream (ffprobe "index"),
+            // por lo que usamos 0:N (global) en lugar de 0:a:N (audio-relativo).
+            let inputs: String = selected_tracks
+                .iter()
+                .map(|t| format!("[0:{}]", t))
+                .collect();
+            let filter = format!(
+                "{}amix=inputs={}:duration=longest:normalize=1[aout]",
+                inputs,
+                selected_tracks.len()
+            );
+            cmd.args(["-filter_complex", &filter]);
+            audio_filter_label = Some("[aout]");
+        } else if !selected_tracks.is_empty() {
+            // Una pista, o varias sin mezclar -> cada una como stream de audio separado.
+            // Usamos el índice global del stream (0:N) porque Track.index de ffprobe
+            // es el índice absoluto, no el relativo entre pistas de audio.
+            for track in selected_tracks {
+                cmd.arg("-map").arg(format!("0:{}", track));
+            }
         }
+        // Si audio_tracks es Some(vec![]) (vacío), el usuario desmarcó todo intencionalmente -> mudo
+    } else {
+        // Si audio_tracks es None -> por defecto mapear audio por defecto/todas las pistas de audio
+        cmd.arg("-map").arg("0:a?");
     }
-    // Si no hay ninguna pista seleccionada, el video sale mudo a propósito
-    // (no forzamos "0:a:0" porque el usuario pudo desmarcar todo intencionalmente).
 
     if let Some(label) = audio_filter_label {
         cmd.arg("-map").arg(label);

@@ -15,6 +15,7 @@ let CurrentActivePresetKey = null;
 let FfmpegCaps = null;
 let lastSliderQuality = 23;
 let lastSliderBitrate = 6;
+let VideoInfoRequestSeq = 0;
 
 const CodecMeta = {
     libx264:    { label: "H.264",   family: "cpu",   hwtag: "" },
@@ -50,7 +51,7 @@ const CodecCrfRange = Object.fromEntries(
 );
 
 // ========== COMUNICACIÓN CON BACKEND ==========
-async function SendMessage(Action, Payload = {}) {
+async function SendMessage(Action, Payload = {}, RequestId = null) {
     const commandMap = {
         get_presets: "get_presets",
         save_preset: "save_preset",
@@ -68,7 +69,7 @@ async function SendMessage(Action, Payload = {}) {
 
     const cmd = commandMap[Action];
     if (!cmd) {
-        return;
+        return false;
     }
 
     try {
@@ -82,11 +83,8 @@ async function SendMessage(Action, Payload = {}) {
                 const presets = await invoke("get_presets");
                 HandleBackendMessage({ action: "presets_list", presets });
             }
-        } else if (cmd === "get_history") {
-            const totalSavedMB = result.reduce((acc, h) => acc + (h.saved_mb || 0), 0);
-            HandleBackendMessage({ action: "history_list", history: result.slice(0, 50), total_saved_mb: parseFloat(totalSavedMB.toFixed(1)) });
         } else if (cmd === "get_video_info") {
-            HandleBackendMessage({ action: "video_info", success: true, info: result });
+            HandleBackendMessage({ action: "video_info", success: true, info: result, request_id: RequestId });
         } else if (cmd === "start_encode") {
             HandleBackendMessage({ action: "log", line: "Compresión iniciada", type: "success" });
         } else if (cmd === "stop_encode") {
@@ -102,13 +100,15 @@ async function SendMessage(Action, Payload = {}) {
         } else if (cmd === "stop_queue") {
             HandleBackendMessage({ action: "log", line: "Cola detenida por el usuario", type: "warning" });
         }
+        return true;
     } catch (e) {
         if (cmd === "get_video_info") {
-            HandleBackendMessage({ action: "video_info", success: false, error: e.toString() });
+            HandleBackendMessage({ action: "video_info", success: false, error: e.toString(), request_id: RequestId });
         } else if (cmd === "start_encode" || cmd === "stop_encode" || cmd === "start_queue" || cmd === "stop_queue") {
             HandleBackendMessage({ action: "encode_finished", success: false, error: e.toString() });
         }
         HandleBackendMessage({ action: "log", line: `Error: ${e}`, type: "error" });
+        return false;
     }
 }
 
@@ -128,7 +128,7 @@ function RenderPresetsBar() {
         Chip.textContent = Preset.name || Key;
         Chip.title = Preset.description || `Aplicar ${Preset.name}`;
         if (CurrentActivePresetKey === Key) {
-            Chip.style.background = 'var(--accent-dim)';
+            Chip.style.background = 'var(--AccentDim)';
             Chip.style.borderColor = 'var(--accent)';
             Chip.style.color = 'var(--accent)';
         }
@@ -137,7 +137,7 @@ function RenderPresetsBar() {
     });
     if (Object.keys(CurrentPresets).length > 6) {
         const MoreChip = document.createElement('div');
-        MoreChip.className = 'preset-chip';
+        MoreChip.className = 'PresetChip';
         MoreChip.textContent = `+${Object.keys(CurrentPresets).length - 6} más`;
         MoreChip.addEventListener('click', () => OpenPresetManager());
         Container.appendChild(MoreChip);
@@ -528,6 +528,9 @@ function HandleBackendMessage(Data) {
 
         case "video_info":
             if (!CurrentVideoPath) {
+                break;
+            }
+            if (Data.request_id !== undefined && Data.request_id !== null && Data.request_id !== VideoInfoRequestSeq) {
                 break;
             }
             if (Data.success && Data.info) {
@@ -1002,7 +1005,8 @@ function SaveCodecUsage(codec) {
 function LoadVideoInfo(FilePath) {
     if (!FilePath) return;
     CurrentVideoPath = FilePath;
-    SendMessage('get_video_info', { path: FilePath });
+    VideoInfoRequestSeq += 1;
+    SendMessage('get_video_info', { path: FilePath }, VideoInfoRequestSeq);
 }
 
 async function StartEncode() {
@@ -1127,6 +1131,7 @@ async function StartEncode() {
         ? document.getElementById("cutStart")?.value
         : null;
     window.currentEncodeCutStartSeconds = cutStartVal ? HmsToSeconds(cutStartVal) : 0;
+    IsEncoding = true;
 
     SendMessage("start_encode", { params: Params });
 }
@@ -1640,10 +1645,18 @@ async function ProcessQueue() {
         return Item;
     });
 
-    SendMessage("start_queue", {
+    const queueStarted = await SendMessage("start_queue", {
         items: queueItems,
         base_params: baseParams
     });
+    if (!queueStarted) {
+        AddLog("❌ No se pudo iniciar la cola", "error");
+        return;
+    }
+
+    QueueProcessing = true;
+    document.getElementById("queueProgress").style.display = "block";
+    document.getElementById("queueTotal").textContent = FileQueue.length;
 
     QueueProcessing = true;
     document.getElementById("queueProgress").style.display = "block";
@@ -1694,6 +1707,7 @@ function ToggleHistory() {
     HistoryExpanded = !HistoryExpanded;
     const historyList = document.getElementById("historyList");
     if (historyList) {
+        historyList.style.display = HistoryExpanded ? "block" : "none";
         if (HistoryExpanded) {
             historyList.classList.add("open");
         } else {
