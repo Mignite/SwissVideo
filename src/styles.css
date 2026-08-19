@@ -163,10 +163,10 @@ body {
 }
 .QueueItemRemove:hover { opacity: 1; background: rgba(232, 93, 78, 0.16); color: var(--Accent); }
 
-.preset-details span, .history-item-details span, .PlayerBtn, .apply-btn, .edit-btn, .delete-btn, .PresetChip, .QueueItemRemove {
+.preset-details span, .HistoryItemDetails span, .PlayerBtn, .apply-btn, .edit-btn, .delete-btn, .PresetChip, .QueueItemRemove {
   display: inline-flex; align-items: center; gap: 5px;
 }
-.preset-details span svg, .history-item-details span svg, .PlayerBtn svg, .apply-btn svg, .edit-btn svg, .delete-btn svg, .QueueItemRemove svg { flex-shrink: 0; }
+.preset-details span svg, .HistoryItemDetails span svg, .PlayerBtn svg, .apply-btn svg, .edit-btn svg, .delete-btn svg, .QueueItemRemove svg { flex-shrink: 0; }
 .preset-details span { gap: 4px; }
 .QueueProgress { font-size: 11px; color: var(--Text3); padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--Border); }
 

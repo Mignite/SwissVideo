@@ -127,6 +127,9 @@ async function SendMessage(Action, Payload = {}, RequestId = null) {
             }
         } else if (cmd === "get_video_info") {
             HandleBackendMessage({ action: "video_info", success: true, info: result, request_id: RequestId });
+        } else if (cmd === "get_history") {
+            const totalSavedMB = result.reduce((acc, h) => acc + (h.saved_mb || 0), 0);
+            HandleBackendMessage({ action: "history_list", history: result.slice(0, 50), total_saved_mb: parseFloat(totalSavedMB.toFixed(1)) });
         } else if (cmd === "start_encode") {
             HandleBackendMessage({ action: "log", line: "Compresión iniciada", type: "success" });
         } else if (cmd === "stop_encode") {
@@ -1730,11 +1733,11 @@ function RenderHistory(history, totalSavedMB) {
 
     const isLeftPanel = container.closest('.left-panel') !== null;
     container.innerHTML = history.slice(0, isLeftPanel ? 10 : 50).map(item => `
-        <div class="history-item">
-            <div class="history-item-name">${item.input} → ${item.output}</div>
-            <div class="history-item-details">
+        <div class="HistoryItem">
+            <div class="HistoryItemName">${item.input} → ${item.output}</div>
+            <div class="HistoryItemDetails">
                 <span>${Icons.box} ${parseFloat(item.original_mb).toFixed(1)} MB → ${parseFloat(item.output_mb).toFixed(1)} MB</span>
-                <span class="history-saved">${Icons.save} Ahorro: ${parseFloat(item.saved_mb).toFixed(1)} MB (${Math.round((1-item.ratio)*100)}%)</span>
+                <span class="HistorySaved">${Icons.save} Ahorro: ${parseFloat(item.saved_mb).toFixed(1)} MB (${Math.round((1-item.ratio)*100)}%)</span>
                 <span>${Icons.film} ${item.codec}</span>
             </div>
         </div>
