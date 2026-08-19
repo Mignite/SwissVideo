@@ -116,3 +116,11 @@ Frontend (Vanilla JS + Vite)  ← invoke() →  Rust Backend (Tauri v2)
 - Enfoque de trabajo: primero la capa gráfica/visual, luego corrección de bugs.
 - Bugs ya resueltos: la vista previa de video no cargaba; el audio no se incluía correctamente al comprimir; el botón cancelar/detener no funcionaba en codificaciones de un solo archivo (causa: faltaba el listener del evento `encode-started` en main.js).
 - Estado actual: se realizaron pruebas para encontrar los presets por defecto más óptimos; el usuario considera la app terminada tras el último fix.
+
+## Session Log
+
+- 2026-08-18 — Fase 0: línea base creada desde un estado limpio con `git commit -m "Baseline before overhaul"`. Base commit: `ff6dff6`.
+- 2026-08-18 — Verificación inicial: `npm run build` y `cargo test --manifest-path src-tauri/Cargo.toml` ejecutados correctamente; ambos pasaron antes de cualquier cambio funcional.
+- 2026-08-18 — Fase 1: análisis de depuración sobre [src/main.js](src/main.js) y [src-tauri/src/lib.rs](src-tauri/src/lib.rs), sin correcciones aplicadas todavía. Se documentan los riesgos reales de concurrencia, cancelación y estado compartido para abordarlos a continuación.
+- 2026-08-18 — Fase 1 (aplicada): correcciones de bugs con causa raíz: parse_ffmpeg_time (coma decimal), is_vp9 (libvpx_vp9), audio_tracks None=default vs Some([])=mudo, SendMessage con RequestId, dedup de video_info stale, IsEncoding pre-llamada, ProcessQueue await+check, ToggleHistory display, --AccentDim y --Panel. Commit: `f19fb3d`.
+- 2026-08-18 — Fase 2 (Optimización): `atomic_write_json` (escritura a .tmp + rename, evita JSON corrupto) con 3 tests; `ProgressThrottle` (100ms) limita emits `encode-progress` y llamadas a `std::fs::metadata` en loops de FFmpeg (de decenas/seg a máx 10/seg) con 3 tests. 9/9 tests + `npm run build` pasan.

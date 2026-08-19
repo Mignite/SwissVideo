@@ -305,6 +305,36 @@ fn get_presets_dir(app: &AppHandle) -> PathBuf {
     config
 }
 
+// ==================== UTILIDADES DE PROGRESO ====================
+
+struct ProgressThrottle {
+    interval: Duration,
+    last_emit: Option<Duration>,
+}
+
+impl ProgressThrottle {
+    fn new(interval: Duration) -> Self {
+        Self { interval, last_emit: None }
+    }
+
+    fn should_emit(&mut self, now: Duration) -> bool {
+        match self.last_emit {
+            None => {
+                self.last_emit = Some(now);
+                true
+            }
+            Some(last) => {
+                if now.saturating_sub(last) >= self.interval {
+                    self.last_emit = Some(now);
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+    }
+}
+
 // ==================== UTILIDADES DE PERSISTENCIA ====================
 
 fn atomic_write_json<T: Serialize>(path: &std::path::Path, value: &T) -> Result<(), String> {
@@ -1060,6 +1090,8 @@ async fn start_encode(
         let mut reader = BufReader::new(stderr);
         let mut buf = Vec::new();
         let mut was_stopped = false;
+        let mut progress_throttle = ProgressThrottle::new(Duration::from_millis(100));
+        let start_instant = std::time::Instant::now();
         loop {
             let n = reader.read_until(b'\r', &mut buf).unwrap_or(0);
             if n == 0 { break; }
@@ -1070,13 +1102,15 @@ async fn start_encode(
             let trimmed = raw.trim();
             if !trimmed.is_empty() {
                 if let Some(mut progress) = parse_ffmpeg_progress(trimmed) {
-                    if let Ok(meta) = std::fs::metadata(&output_path2) {
-                        let real_kb = meta.len() as f64 / 1024.0;
-                        if let Some(obj) = progress.as_object_mut() {
-                            obj.insert("current_size_kb".into(), serde_json::json!(real_kb));
+                    if progress_throttle.should_emit(start_instant.elapsed()) {
+                        if let Ok(meta) = std::fs::metadata(&output_path2) {
+                            let real_kb = meta.len() as f64 / 1024.0;
+                            if let Some(obj) = progress.as_object_mut() {
+                                obj.insert("current_size_kb".into(), serde_json::json!(real_kb));
+                            }
                         }
+                        let _ = app2.emit("encode-progress", progress);
                     }
-                    let _ = app2.emit("encode-progress", progress);
                 }
             }
             buf.clear();
@@ -1279,6 +1313,8 @@ async fn start_queue(
             if let Some(stderr) = stderr {
                 let mut reader = BufReader::new(stderr);
                 let mut line_buf = Vec::new();
+                let mut progress_throttle = ProgressThrottle::new(Duration::from_millis(100));
+                let start_instant = std::time::Instant::now();
                 loop {
                     let n = reader.read_until(b'\r', &mut line_buf).unwrap_or(0);
                     if n == 0 { break; }
@@ -1289,13 +1325,15 @@ async fn start_queue(
                     let trimmed = raw.trim();
                     if !trimmed.is_empty() {
                         if let Some(mut progress) = parse_ffmpeg_progress(trimmed) {
-                            if let Ok(meta) = std::fs::metadata(&output_path) {
-                                let real_kb = meta.len() as f64 / 1024.0;
-                                if let Some(obj) = progress.as_object_mut() {
-                                    obj.insert("current_size_kb".into(), serde_json::json!(real_kb));
+                            if progress_throttle.should_emit(start_instant.elapsed()) {
+                                if let Ok(meta) = std::fs::metadata(&output_path) {
+                                    let real_kb = meta.len() as f64 / 1024.0;
+                                    if let Some(obj) = progress.as_object_mut() {
+                                        obj.insert("current_size_kb".into(), serde_json::json!(real_kb));
+                                    }
                                 }
+                                let _ = app2.emit("encode-progress", progress);
                             }
-                            let _ = app2.emit("encode-progress", progress);
                         }
                     }
                     line_buf.clear();
@@ -1526,6 +1564,29 @@ mod tests {
         atomic_write_json(&path, &map).expect("write should succeed");
         let tmp = path.with_extension("tmp");
         assert!(!tmp.exists(), "tmp file must be cleaned up after rename");
+    }
+
+    #[test]
+    fn progress_throttle_allows_first_call() {
+        let mut t = ProgressThrottle::new(Duration::from_millis(100));
+        assert!(t.should_emit(Duration::from_millis(0)));
+    }
+
+    #[test]
+    fn progress_throttle_blocks_calls_within_interval() {
+        let mut t = ProgressThrottle::new(Duration::from_millis(100));
+        t.should_emit(Duration::from_millis(0));
+        assert!(!t.should_emit(Duration::from_millis(50)));
+        assert!(!t.should_emit(Duration::from_millis(99)));
+    }
+
+    #[test]
+    fn progress_throttle_allows_after_interval_elapses() {
+        let mut t = ProgressThrottle::new(Duration::from_millis(100));
+        t.should_emit(Duration::from_millis(0));
+        assert!(t.should_emit(Duration::from_millis(100)));
+        assert!(!t.should_emit(Duration::from_millis(150)));
+        assert!(t.should_emit(Duration::from_millis(200)));
     }
 
     #[test]
