@@ -103,12 +103,12 @@ Frontend (Vanilla JS + Vite)  ← invoke() →  Rust Backend (Tauri v2)
 
 ## Mejoras Pendientes para V2 (Roadmap)
 
-- [ ] Eventos de progreso en tiempo real (emit desde hilo separado)
+- [x] Eventos de progreso en tiempo real (emit desde hilo separado)
 - [ ] Cola de archivos (array + ProcessNextInQueue como en V1)
 - [ ] Cálculo de bitrate para tamaño objetivo
-- [ ] Drag & drop de archivos
+- [x] Drag & drop de archivos
 - [ ] Pipeline AV1 con parámetros tuneados
-- [ ] Tests unitarios en Rust
+- [x] Tests unitarios en Rust
 
 ## Memoria del usuario
 - SwissVideo es un compresor de video basado en Electron/FFmpeg, con cola de procesamiento por lotes (batch queue), presets, corte/recorte (cut/trim) y selección de pista de audio, con memoria de audio por ítem.
@@ -123,4 +123,5 @@ Frontend (Vanilla JS + Vite)  ← invoke() →  Rust Backend (Tauri v2)
 - 2026-08-18 — Verificación inicial: `npm run build` y `cargo test --manifest-path src-tauri/Cargo.toml` ejecutados correctamente; ambos pasaron antes de cualquier cambio funcional.
 - 2026-08-18 — Fase 1: análisis de depuración sobre [src/main.js](src/main.js) y [src-tauri/src/lib.rs](src-tauri/src/lib.rs), sin correcciones aplicadas todavía. Se documentan los riesgos reales de concurrencia, cancelación y estado compartido para abordarlos a continuación.
 - 2026-08-18 — Fase 1 (aplicada): correcciones de bugs con causa raíz: parse_ffmpeg_time (coma decimal), is_vp9 (libvpx_vp9), audio_tracks None=default vs Some([])=mudo, SendMessage con RequestId, dedup de video_info stale, IsEncoding pre-llamada, ProcessQueue await+check, ToggleHistory display, --AccentDim y --Panel. Commit: `f19fb3d`.
-- 2026-08-18 — Fase 2 (Optimización): `atomic_write_json` (escritura a .tmp + rename, evita JSON corrupto) con 3 tests; `ProgressThrottle` (100ms) limita emits `encode-progress` y llamadas a `std::fs::metadata` en loops de FFmpeg (de decenas/seg a máx 10/seg) con 3 tests. 9/9 tests + `npm run build` pasan.
+- 2026-08-18 — Fase 2 (Optimización): `atomic_write_json` (escritura a .tmp + rename, evita JSON corrupto) con 3 tests; `ProgressThrottle` (100ms) limita emits `encode-progress` y llamadas a `std::fs::metadata` en loops de FFmpeg (de decenas/seg a máx 10/seg) con 3 tests. 9/9 tests + `npm run build` pasan. Commit: `c273e69`.
+- 2026-08-18 — Fase 3 (Diseño): se quitó Google Fonts CDN (Inter/JetBrains Mono) → system stack (`system-ui, -apple-system, "Segoe UI", Roboto`) para funcionar offline. Emojis reemplazados por helper `Icons` con SVGs inline (`src/main.js`, ~27 iconos): presets, cola, historial, status encode, player. Tokens CSS nuevos: `--Radius/--RadiusSm/--RadiusLg`, `--Space-1..5`, `--Success/--Danger/--Warn`. Fix de case-sensitivity de CSS vars en `main.js`: `--accent`→`--Accent`, `--text-3`→`--Text3`, `--warn/--success/--danger`→`--Warn/--Success/--Danger` (los estados de color no se veían porque las vars no coincidían). Se añadió `.LogLine.warning` (usaba type "warning" sin estilo). Regex en `AddLog` limpia emojis sobrantes en logs.`

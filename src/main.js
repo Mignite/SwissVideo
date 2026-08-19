@@ -61,6 +61,37 @@ const CodecCrfRange = Object.fromEntries(
     })
 );
 
+// ========== ICONOS SVG ==========
+const Icons = {
+    film: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 4v16M17 4v16M2 9h5M2 15h5M17 9h5M17 15h5"/></svg>',
+    ruler: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="8" rx="1"/><path d="M7 8v4M11 8v4M15 8v4M19 8v4"/></svg>',
+    frames: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h6v14H4zM14 5h6v14h-6z"/><path d="M10 9h4M10 15h4"/></svg>',
+    gear: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    target: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>',
+    check: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
+    x: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+    warn: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+    refresh: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
+    box: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></svg>',
+    rocket: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>',
+    list: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+    stop: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>',
+    stats: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>',
+    save: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>',
+    folder: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+    play: '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>',
+    close: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+    dot: '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg>',
+    scissors: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>',
+    audio: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
+    info: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>',
+    empty: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+};
+
 // ========== COMUNICACIÓN CON BACKEND ==========
 async function SendMessage(Action, Payload = {}, RequestId = null) {
     const commandMap = {
@@ -140,8 +171,8 @@ function RenderPresetsBar() {
         Chip.title = Preset.description || `Aplicar ${Preset.name}`;
         if (CurrentActivePresetKey === Key) {
             Chip.style.background = 'var(--AccentDim)';
-            Chip.style.borderColor = 'var(--accent)';
-            Chip.style.color = 'var(--accent)';
+            Chip.style.borderColor = 'var(--Accent)';
+            Chip.style.color = 'var(--Accent)';
         }
         Chip.addEventListener('click', () => ApplyPreset(Key, Preset));
         Container.appendChild(Chip);
@@ -169,7 +200,7 @@ function RenderPresetsList() {
     if (!Container) return;
     Container.innerHTML = '';
     if (Object.keys(CurrentPresets).length === 0) {
-        Container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-3);">📭 No hay presets.<br>Haz click en "Nuevo Preset" para crear uno.</div>`;
+        Container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--Text3);">${Icons.box} No hay presets.<br>Haz click en "Nuevo Preset" para crear uno.</div>`;
         return;
     }
     Object.entries(CurrentPresets).forEach(([Key, Preset]) => {
@@ -185,14 +216,14 @@ function RenderPresetsList() {
             </div>
             <div class="preset-desc">${escapeHtml(Preset.description || 'Sin descripción')}</div>
             <div class="preset-details">
-                <span>🎬 ${CodecName}</span><span>📐 ${Resolution}</span>
-                <span>🎞️ ${Preset.fps === 'original' ? 'FPS orig' : Preset.fps + ' fps'}</span>
-                <span>⚙️ ${Preset.rate_control === 'vbr' ? 'VBR' : Preset.rate_control === 'cbr' ? 'CBR' : 'CQ'} ${Preset.rate_control === 'cq' ? Preset.quality : Preset.bitrate + 'M'}</span>
+                <span>${Icons.film} ${CodecName}</span><span>${Icons.ruler} ${Resolution}</span>
+                <span>${Icons.frames} ${Preset.fps === 'original' ? 'FPS orig' : Preset.fps + ' fps'}</span>
+                <span>${Icons.gear} ${Preset.rate_control === 'vbr' ? 'VBR' : Preset.rate_control === 'cbr' ? 'CBR' : 'CQ'} ${Preset.rate_control === 'cq' ? Preset.quality : Preset.bitrate + 'M'}</span>
             </div>
             <div class="preset-actions">
-                <button class="apply-btn" data-key="${Key}">🎯 Aplicar</button>
-                <button class="edit-btn" data-key="${Key}">✏️ Editar</button>
-                <button class="delete-btn" data-key="${Key}">🗑️ Eliminar</button>
+                <button class="apply-btn" data-key="${Key}">${Icons.target} Aplicar</button>
+                <button class="edit-btn" data-key="${Key}">${Icons.edit} Editar</button>
+                <button class="delete-btn" data-key="${Key}">${Icons.trash} Eliminar</button>
             </div>`;
         Container.appendChild(Item);
     });
@@ -223,12 +254,12 @@ function OpenEditPresetModal(EditKey = null) {
     const NameInput = document.getElementById("editPresetName");
     const DescInput = document.getElementById("editPresetDesc");
     if (EditKey && CurrentPresets[EditKey]) {
-        Title.textContent = `✏️ Editar: ${CurrentPresets[EditKey].name}`;
+        Title.textContent = `Editar: ${CurrentPresets[EditKey].name}`;
         NameInput.value = CurrentPresets[EditKey].name;
         DescInput.value = CurrentPresets[EditKey].description || '';
         Modal.dataset.editKey = EditKey;
     } else {
-        Title.textContent = "✨ Crear Nuevo Preset";
+        Title.textContent = "Crear Nuevo Preset";
         NameInput.value = '';
         DescInput.value = '';
         delete Modal.dataset.editKey;
@@ -322,7 +353,7 @@ function ApplyPreset(PresetKey, Preset) {
     const Indicator = document.getElementById("activePresetIndicator");
     if (Indicator) {
         Indicator.style.display = 'block';
-        Indicator.innerHTML = `🔘 Usando preset: ${Preset.name}`;
+        Indicator.innerHTML = `${Icons.dot} Usando preset: ${Preset.name}`;
         setTimeout(() => { Indicator.style.opacity = '0.5'; }, 2000);
     }
     AddLog(`✅ Preset "${Preset.name}" aplicado`, "success");
@@ -367,7 +398,7 @@ function ImportPresets() {
 }
 
 function ResetDefaultPresets() {
-    if (confirm("⚠️ ¿Restaurar presets por defecto? Se perderán los personalizados.")) {
+    if (confirm("¿Restaurar presets por defecto? Se perderán los personalizados.")) {
         SendMessage('reset_default_presets');
         CurrentActivePresetKey = null;
         const ind = document.getElementById("activePresetIndicator");
@@ -451,7 +482,7 @@ function AddLog(Message, Type = "info") {
     if (!LogBody) return;
     const Line = document.createElement("div");
     Line.className = `LogLine ${Type}`;
-    Line.textContent = `[${new Date().toLocaleTimeString()}] ${Message}`;
+    Line.textContent = `[${new Date().toLocaleTimeString()}] ${Message}`.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2B00}-\u{2BFF}\u{2705}]/gu, '');
     LogBody.appendChild(Line);
     LogBody.scrollTop = LogBody.scrollHeight;
     const logPreview = document.getElementById("logPreview");
@@ -600,8 +631,8 @@ function HandleBackendMessage(Data) {
 
             const statusDiv3 = document.getElementById("encodingStatus");
             if (statusDiv3) {
-                statusDiv3.innerHTML = "⌛ Iniciando compresión...";
-                statusDiv3.style.color = "var(--warn)";
+                statusDiv3.innerHTML = `${Icons.refresh} Iniciando compresión...`;
+                statusDiv3.style.color = "var(--Warn)";
             }
             AddLog(`Iniciando compresión`, "success");
             break;
@@ -620,11 +651,11 @@ function HandleBackendMessage(Data) {
             const statusDiv2 = document.getElementById("encodingStatus");
             if (statusDiv2) {
                 if (Data.success) {
-                    statusDiv2.innerHTML = "✅ Compresión completada ✅";
-                    statusDiv2.style.color = "var(--success)";
+                    statusDiv2.innerHTML = `${Icons.check} Compresión completada`;
+                    statusDiv2.style.color = "var(--Success)";
                 } else {
-                    statusDiv2.innerHTML = "❌ Compresión cancelada ❌";
-                    statusDiv2.style.color = "var(--danger)";
+                    statusDiv2.innerHTML = `${Icons.x} Compresión cancelada`;
+                    statusDiv2.style.color = "var(--Danger)";
                 }
                 setTimeout(() => { if (statusDiv2) statusDiv2.innerHTML = ""; }, 5000);
             }
@@ -672,7 +703,7 @@ function UpdateAudioTracks(Info) {
     Container.innerHTML = "";
 
     if (!Info.audio_tracks || Info.audio_tracks.length === 0) {
-        Container.innerHTML = '<div style="color: var(--text-3); padding: 8px;">No se detectaron pistas de audio</div>';
+        Container.innerHTML = '<div style="color: var(--Text3); padding: 8px;">No se detectaron pistas de audio</div>';
         return;
     }
 
@@ -742,8 +773,8 @@ function UpdateProgress(Data) {
     if (!FirstFrameReceived && (Data.frames_done > 0 || (Data.current_seconds && Data.current_seconds > 0))) {
         FirstFrameReceived = true;
         if (statusDiv) {
-            statusDiv.innerHTML = "🎬 Comprimiendo video... 🎬";
-            statusDiv.style.color = "var(--accent)";
+            statusDiv.innerHTML = `${Icons.film} Comprimiendo video...`;
+            statusDiv.style.color = "var(--Accent)";
         }
         AddLog("✅ Análisis completado, comenzando compresión", "success");
     }
@@ -857,16 +888,16 @@ function UpdateLiveEstimate(currentSizeMB, currentSeconds) {
 
     if (estSize) {
         estSize.textContent = `~${Math.round(estimatedTotalMB)} MB (en vivo)`;
-        estSize.style.color = "var(--accent)";
+        estSize.style.color = "var(--Accent)";
     }
 
     if (estReduction) {
         const reductionPercent = Math.max(-100, Math.min(100, reduction));
         estReduction.textContent = `${reductionPercent > 0 ? '-' : '+'}${Math.abs(Math.round(reductionPercent))}%`;
         if (reductionPercent < 0) {
-            estReduction.style.color = "var(--danger)";
+            estReduction.style.color = "var(--Danger)";
         } else {
-            estReduction.style.color = "var(--success)";
+            estReduction.style.color = "var(--Success)";
         }
     }
 }
@@ -888,11 +919,11 @@ function UpdateEstimate() {
         const estReduction = document.getElementById("estReduction");
         if (estSize) {
             estSize.textContent = `~${Math.round(EstimatedMb)} MB (historial)`;
-            estSize.style.color = "var(--accent)";
+            estSize.style.color = "var(--Accent)";
         }
         if (estReduction) {
             estReduction.textContent = `-${Math.round((1 - savedFactor) * 100)}%`;
-            estReduction.style.color = "var(--success)";
+            estReduction.style.color = "var(--Success)";
         }
         return;
     }
@@ -911,11 +942,11 @@ function UpdateEstimate() {
     const estReduction = document.getElementById("estReduction");
     if (estSize) {
         estSize.textContent = `~${Math.round(EstimatedMb)} MB (estimado)`;
-        estSize.style.color = "var(--accent)";
+        estSize.style.color = "var(--Accent)";
     }
     if (estReduction) {
         estReduction.textContent = `-${Math.round((1 - Ratio) * 100)}%`;
-        estReduction.style.color = "var(--success)";
+        estReduction.style.color = "var(--Success)";
     }
 }
 
@@ -1069,17 +1100,17 @@ async function StartEncode() {
     if (statusDiv) {
         if (CurrentVideoInfo && CurrentVideoInfo.size_mb > 5000) {
             statusDiv.innerHTML = "<span class='analyzing-spinner'></span> Analizando archivo grande... puede tomar hasta 30 segundos";
-            statusDiv.style.color = "var(--warn)";
+            statusDiv.style.color = "var(--Warn)";
         } else {
             statusDiv.innerHTML = "<span class='analyzing-spinner'></span> Analizando archivo...";
-            statusDiv.style.color = "var(--warn)";
+            statusDiv.style.color = "var(--Warn)";
         }
     }
 
     const warningContainer = document.getElementById("sizeWarningContainer");
     if (warningContainer && CurrentVideoInfo && CurrentVideoInfo.size_mb > 5000) {
         warningContainer.innerHTML = `
-            <div style="background: rgba(245, 158, 11, 0.15); border-left: 3px solid var(--warn); padding: 8px 12px; border-radius: 6px; margin-top: 12px; font-size: 11px;">
+            <div style="background: rgba(245, 158, 11, 0.15); border-left: 3px solid var(--Warn); padding: 8px 12px; border-radius: 6px; margin-top: 12px; font-size: 11px;">
                 ⏳ <strong>Archivo grande (${(CurrentVideoInfo.size_mb/1024).toFixed(1)}GB)</strong><br>
                 La compresión puede tardar 10-30 segundos en comenzar mientras FFmpeg analiza el archivo.
             </div>
@@ -1189,8 +1220,8 @@ function StopEncode() {
 
     const statusDiv = document.getElementById("encodingStatus");
     if (statusDiv) {
-        statusDiv.innerHTML = "⏹️ Deteniendo...";
-        statusDiv.style.color = "var(--warn)";
+        statusDiv.innerHTML = `${Icons.stop} Deteniendo...`;
+        statusDiv.style.color = "var(--Warn)";
     }
 
     AddLog("⏹️ Deteniendo proceso... puede tomar unos segundos", "warning");
@@ -1354,7 +1385,7 @@ function OpenCutSelector() {
     UpdateTimelineVisuals();
     UpdateMarkerVisuals();
     const PlayerPlayBtn = document.getElementById("playerPlayBtn");
-    if (PlayerPlayBtn) PlayerPlayBtn.textContent = PreviewVideo.paused ? "▶ Play" : "⏸ Pausa";
+    if (PlayerPlayBtn) PlayerPlayBtn.innerHTML = PreviewVideo.paused ? `${Icons.play} Play` : `${Icons.pause} Pausa`;
 }
 
 function CloseCutSelector() {
@@ -1481,8 +1512,8 @@ function RenderQueueList() {
 
     if (FileQueue.length === 0) {
         container.innerHTML = `
-            <div style="padding: 20px; text-align: center; color: var(--text-3);">
-                📭 Sin archivos en cola<br>
+            <div style="padding: 20px; text-align: center; color: var(--Text3);">
+                ${Icons.box} Sin archivos en cola<br>
                 Haz click en "Seleccionar Videos" para agregar videos
             </div>
         `;
@@ -1491,10 +1522,10 @@ function RenderQueueList() {
 
     container.innerHTML = FileQueue.map((item, idx) => {
         const CutBadge = (item.cut_start || item.cut_end)
-            ? `<span style="font-size:9px;color:var(--accent);display:block;margin-top:2px;font-family:monospace">✂ ${item.cut_start || '00:00:00'} → ${item.cut_end || 'fin'}</span>`
+            ? `<span style="font-size:9px;color:var(--Accent);display:block;margin-top:2px;font-family:monospace">${Icons.scissors} ${item.cut_start || '00:00:00'} → ${item.cut_end || 'fin'}</span>`
             : '';
         const AudioBadge = (item.audio_tracks && item.audio_tracks.length > 0)
-            ? `<span style="font-size:9px;color:var(--warn);display:block;margin-top:2px;font-family:monospace">🔊 ${(item.audio_track_names || item.audio_tracks.map(i => `Track ${i + 1}`)).join(', ')}</span>`
+            ? `<span style="font-size:9px;color:var(--Warn);display:block;margin-top:2px;font-family:monospace">${Icons.audio} ${(item.audio_track_names || item.audio_tracks.map(i => `Track ${i + 1}`)).join(', ')}</span>`
             : '';
         return `
             <div class="QueueItem ${idx === CurrentQueueSelectedIndex ? 'active' : ''}" data-queue-index="${idx}">
@@ -1503,7 +1534,7 @@ function RenderQueueList() {
                     ${CutBadge}
                     ${AudioBadge}
                 </div>
-                <button class="QueueItemRemove" data-index="${idx}" title="Quitar de la cola">✕</button>
+                <button class="QueueItemRemove" data-index="${idx}" title="Quitar de la cola">${Icons.close}</button>
             </div>
         `;
     }).join('');
@@ -1682,15 +1713,15 @@ function RenderHistory(history, totalSavedMB) {
     const stats = document.getElementById("historyStats");
 
     if (stats) {
-        stats.textContent = `💾 Ahorro: ${totalSavedMB.toFixed(1)} MB`;
+        stats.textContent = `Ahorro: ${totalSavedMB.toFixed(1)} MB`;
     }
 
     if (!container) return;
 
     if (!history || history.length === 0) {
         container.innerHTML = `
-            <div style="padding: 20px; text-align: center; color: var(--text-3);">
-                🕐 Sin historial aún<br>
+            <div style="padding: 20px; text-align: center; color: var(--Text3);">
+                ${Icons.clock} Sin historial aún<br>
                 Comprime un video para ver estadísticas
             </div>
         `;
@@ -1702,9 +1733,9 @@ function RenderHistory(history, totalSavedMB) {
         <div class="history-item">
             <div class="history-item-name">${item.input} → ${item.output}</div>
             <div class="history-item-details">
-                <span>📦 ${parseFloat(item.original_mb).toFixed(1)} MB → ${parseFloat(item.output_mb).toFixed(1)} MB</span>
-                <span class="history-saved">💾 Ahorro: ${parseFloat(item.saved_mb).toFixed(1)} MB (${Math.round((1-item.ratio)*100)}%)</span>
-                <span>🎬 ${item.codec}</span>
+                <span>${Icons.box} ${parseFloat(item.original_mb).toFixed(1)} MB → ${parseFloat(item.output_mb).toFixed(1)} MB</span>
+                <span class="history-saved">${Icons.save} Ahorro: ${parseFloat(item.saved_mb).toFixed(1)} MB (${Math.round((1-item.ratio)*100)}%)</span>
+                <span>${Icons.film} ${item.codec}</span>
             </div>
         </div>
     `).join('');
@@ -1745,7 +1776,7 @@ async function SelectMultipleFiles() {
 
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("🚀 Inicializando SwissVideo...");
+    console.log("Inicializando SwissVideo...");
 
     // Eventos de progreso desde Rust
     listen("encode-progress", (event) => {
@@ -1978,8 +2009,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (CutVideo) {
         CutVideo.addEventListener("timeupdate", () => { if (!IsScrubbing) UpdateTimelineVisuals(); });
-        CutVideo.addEventListener("play", () => { if (PlayerPlayBtn) PlayerPlayBtn.textContent = "⏸ Pausa"; });
-        CutVideo.addEventListener("pause", () => { if (PlayerPlayBtn) PlayerPlayBtn.textContent = "▶ Play"; });
+        CutVideo.addEventListener("play", () => { if (PlayerPlayBtn) PlayerPlayBtn.innerHTML = `${Icons.pause} Pausa`; });
+        CutVideo.addEventListener("pause", () => { if (PlayerPlayBtn) PlayerPlayBtn.innerHTML = `${Icons.play} Play`; });
     }
 
     if (PlayerPlayBtn) {

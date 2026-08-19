@@ -19,11 +19,24 @@
   --Text3: #8a8a94;
   --Text4: #6a6a74;
   --Text5: #55555f;
+
+  --Success: #7ED957;
+  --Danger: #E85D4E;
+  --Warn: #E8C34E;
+
+  --Radius: 8px;
+  --RadiusSm: 6px;
+  --RadiusLg: 12px;
+  --Space-1: 4px;
+  --Space-2: 8px;
+  --Space-3: 12px;
+  --Space-4: 16px;
+  --Space-5: 24px;
 }
 
 body {
   margin: 0 !important;
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 15px;
   line-height: 1.5;
   color: var(--Text);
@@ -94,7 +107,7 @@ body {
   color: var(--Text3);
   background: transparent;
   border: 1px solid var(--BorderStrong);
-  border-radius: 6px;
+  border-radius: var(--RadiusSm);
   padding: 4px 8px;
   cursor: pointer;
   transition: border-color 0.2s, color 0.2s;
@@ -115,7 +128,7 @@ body {
   border-color: var(--Accent);
   background: rgba(232, 93, 78, 0.06);
 }
-.DzIcon { font-size: 22px; margin-bottom: 6px; opacity: 0.8; }
+.DzIcon { display: flex; align-items: center; justify-content: center; margin-bottom: 6px; opacity: 0.8; color: var(--Accent); }
 .DzTitle { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
 .DzSub { font-size: 11px; color: var(--Text4); }
 
@@ -124,7 +137,7 @@ body {
 .QueueEmpty { text-align: center; color: var(--Text5); font-size: 12px; padding: 16px 4px; }
 .QueueItem {
   display: flex; align-items: center; gap: 8px;
-  padding: 8px 10px; border-radius: 8px;
+  padding: 8px 10px; border-radius: var(--Radius);
   border-left: 3px solid transparent;
   margin-top: 4px;
   cursor: pointer;
@@ -143,16 +156,22 @@ body {
   background: transparent;
   color: var(--Text4);
   font-size: 12px;
-  border-radius: 6px;
+  border-radius: var(--RadiusSm);
   cursor: pointer;
   opacity: 0.55;
   transition: opacity 0.15s, background 0.15s, color 0.15s;
 }
 .QueueItemRemove:hover { opacity: 1; background: rgba(232, 93, 78, 0.16); color: var(--Accent); }
+
+.preset-details span, .history-item-details span, .PlayerBtn, .apply-btn, .edit-btn, .delete-btn, .PresetChip, .QueueItemRemove {
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.preset-details span svg, .history-item-details span svg, .PlayerBtn svg, .apply-btn svg, .edit-btn svg, .delete-btn svg, .QueueItemRemove svg { flex-shrink: 0; }
+.preset-details span { gap: 4px; }
 .QueueProgress { font-size: 11px; color: var(--Text3); padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--Border); }
 
 /* ===== HISTORIAL (acordeón) ===== */
-.Accordion { background: var(--Panel2); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+.Accordion { background: var(--Panel2); border-radius: var(--Radius); overflow: hidden; flex-shrink: 0; }
 .AccordionHeader {
   width: 100%; display: flex; justify-content: space-between; align-items: center;
   background: transparent; border: none;
@@ -190,7 +209,7 @@ body {
 .CodecFamLabel { font-size: 12px; font-weight: 600; color: var(--Text2); }
 .CodecFamOpts { display: flex; gap: 4px; }
 .CodecOpt {
-  padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: var(--RadiusSm); font-size: 11px; font-weight: 600;
   border: 1px solid var(--BorderStrong); background: var(--Panel2); color: var(--Text3);
   cursor: pointer; user-select: none; transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
@@ -199,7 +218,7 @@ body {
 .Cbtn {
   position: relative;
   padding: 7px 16px;
-  border-radius: 8px;
+  border-radius: var(--Radius);
   border: 1px solid var(--BorderStrong);
   background: var(--Panel2);
   color: var(--Text3);
@@ -227,7 +246,7 @@ input[type=range]::-webkit-slider-thumb {
 }
 select, .Sel {
   background: var(--Panel2); border: 1px solid var(--BorderStrong);
-  border-radius: 8px; color: var(--Text);
+  border-radius: var(--Radius); color: var(--Text);
   padding: 7px 10px; font-size: 12px; cursor: pointer;
   transition: border-color 0.2s;
 }
@@ -239,7 +258,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 /* ===== CORTE ===== */
 .CutModes { display: flex; gap: 8px; margin-bottom: 10px; }
 .CutMode {
-  flex: 1; padding: 7px 10px; border-radius: 8px;
+  flex: 1; padding: 7px 10px; border-radius: var(--Radius);
   border: 1px solid var(--BorderStrong);
   background: var(--Panel2); color: var(--Text3);
   font-size: 12px; cursor: pointer;
@@ -248,7 +267,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .CutMode.on { border-color: var(--Accent); color: var(--Accent); }
 .RateCtrl { display: flex; gap: 4px; }
 .RateOpt {
-  padding: 2px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  padding: 2px 10px; border-radius: var(--RadiusSm); font-size: 11px; font-weight: 600;
   border: 1px solid var(--BorderStrong); background: var(--Panel2); color: var(--Text3);
   cursor: pointer; user-select: none;
 }
@@ -258,7 +277,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .TimeInput {
   width: 100px; text-align: center; font-family: monospace;
   background: var(--Panel2); border: 1px solid var(--BorderStrong);
-  border-radius: 8px; padding: 7px 6px;
+  border-radius: var(--Radius); padding: 7px 6px;
   color: var(--Text); font-size: 12px;
 }
 
@@ -273,7 +292,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .Tpl:hover { border-color: var(--AccentBlue); }
 .NameField {
   width: 100%; background: var(--Panel2);
-  border: 1px solid var(--BorderStrong); border-radius: 8px;
+  border: 1px solid var(--BorderStrong); border-radius: var(--Radius);
   padding: 8px 10px; color: var(--Text);
   font-family: monospace; font-size: 12px;
 }
@@ -284,7 +303,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .DirRow { display: flex; gap: 8px; }
 .DirInp {
   flex: 1; min-width: 0; background: var(--Panel2);
-  border: 1px solid var(--BorderStrong); border-radius: 8px;
+  border: 1px solid var(--BorderStrong); border-radius: var(--Radius);
   padding: 8px 10px; color: var(--Text); font-size: 12px;
 }
 .CheckRow { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--Text3); }
@@ -307,7 +326,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
   align-items: center; justify-content: center; gap: 6px;
   color: var(--Text5); pointer-events: none;
 }
-.PreviewPlaceholder span:first-child { font-size: 26px; opacity: 0.6; }
+.PreviewPlayIcon { display: flex; align-items: center; justify-content: center; opacity: 0.6; }
 .PreviewPlaceholder span:last-child { font-size: 11px; }
 
 .EncodeContainer { margin-top: auto; flex-shrink: 0; }
@@ -341,7 +360,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
   flex-shrink: 0;
   margin: 0 14px 14px;
   background: var(--Panel);
-  border-radius: 8px;
+  border-radius: var(--Radius);
   overflow: hidden;
 }
 .LogHd { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; }
@@ -354,6 +373,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .LogLine { font-family: monospace; font-size: 11px; color: var(--Text4); padding: 2px 0; }
 .LogLine.success { color: var(--AccentGreen); }
 .LogLine.error { color: var(--Accent); }
+.LogLine.warning { color: var(--AccentYellow); }
 .LogLine.info { color: var(--AccentBlue); }
 
 /* ===== MODALES ===== */
@@ -366,7 +386,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .ModalOverlay.open, .ModalOverlay[style*="flex"] { display: flex; }
 .Modal {
   background: var(--Panel);
-  border-radius: 12px;
+  border-radius: var(--RadiusLg);
   width: 480px;
   max-width: 92vw;
   max-height: 85vh;
@@ -396,11 +416,11 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
   font-size: 12px; font-weight: 600; color: var(--Text);
   padding-bottom: 6px; border-bottom: 1px solid var(--Border);
 }
-.PlayerVideoWrap { background: #000; border-radius: 8px; aspect-ratio: 16/9; overflow: hidden; }
+.PlayerVideoWrap { background: #000; border-radius: var(--Radius); aspect-ratio: 16/9; overflow: hidden; }
 .PlayerVideoWrap video { width: 100%; height: 100%; }
-.PlayerTimelineWrap { position: relative; height: 44px; background: var(--Panel2); border-radius: 6px; cursor: pointer; }
+.PlayerTimelineWrap { position: relative; height: 44px; background: var(--Panel2); border-radius: var(--RadiusSm); cursor: pointer; }
 .playerTimelineTrack { position: relative; width: 100%; height: 100%; }
-.playerFill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--Accent); opacity: 0.3; border-radius: 6px; pointer-events: none; }
+.playerFill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--Accent); opacity: 0.3; border-radius: var(--RadiusSm); pointer-events: none; }
 .playerThumb { position: absolute; top: 50%; left: 0%; width: 12px; height: 12px; background: var(--Accent); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; box-shadow: 0 0 4px rgba(0,0,0,0.5); }
 .playerSelection { position: absolute; top: 0; height: 100%; background: var(--Accent); opacity: 0.15; pointer-events: none; display: none; z-index: 2; }
 .marker { position: absolute; top: 0; height: 100%; width: 3px; background: var(--Accent); pointer-events: none; display: none; z-index: 3; }
@@ -408,18 +428,18 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .markerEnd { background: #f44336; }
 .markerLabel { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--Text3); white-space: nowrap; padding: 1px 4px; background: var(--Panel1); border-radius: 3px; margin-bottom: 2px; }
 .PlayerControls { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--Text3); }
-.PlayerBtn { background: var(--Panel2); border: 1px solid var(--BorderStrong); border-radius: 8px; padding: 8px 16px; color: var(--Text); cursor: pointer; }
+.PlayerBtn { background: var(--Panel2); border: 1px solid var(--BorderStrong); border-radius: var(--Radius); padding: 8px 16px; color: var(--Text); cursor: pointer; }
 .PlayerBtn:hover { border-color: var(--Accent); }
 .PlayerMarkRow { display: flex; gap: 10px; margin-top: 2px; }
 .PlayerMarkBtn {
   flex: 1; display: flex; justify-content: space-between;
-  padding: 8px 10px; border-radius: 8px;
+  padding: 8px 10px; border-radius: var(--Radius);
   border: 1px solid var(--BorderStrong);
   background: var(--Panel2); font-size: 11px; color: var(--Text3); cursor: pointer;
 }
 .PlayerMarkBtn:hover { border-color: var(--Accent); }
 .PlayerConfirmBtn {
-  width: 100%; padding: 10px; border-radius: 8px;
+  width: 100%; padding: 10px; border-radius: var(--Radius);
   border: 1px solid var(--Accent);
   background: rgba(232, 93, 78, 0.12);
   color: var(--Accent); font-weight: 600; cursor: pointer;
@@ -427,7 +447,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 
 /* ===== BOTONES GENERALES ===== */
 button {
-  border-radius: 8px;
+  border-radius: var(--Radius);
   border: 1px solid var(--BorderStrong);
   padding: 0.5em 1em;
   font-size: 0.9em;

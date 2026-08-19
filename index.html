@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SwissVideo - Compresor Profesional</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/src/styles.css" />
 </head>
 <body>
@@ -16,7 +14,9 @@
   <!-- COLUMNA IZQUIERDA -->
   <div class="Col">
     <div class="Dropzone" id="dropzone">
-      <div class="DzIcon">＋</div>
+      <div class="DzIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      </div>
       <div class="DzTitle">Archivos para comprimir</div>
       <div class="DzSub">
         <button id="selectFilesBtn" class="EncodeBtn" style="width:auto;padding:7px 18px;font-size:12px;margin-top:10px">Seleccionar Videos</button>
@@ -179,7 +179,9 @@
         <source id="previewSource" src="">
       </video>
       <div id="videoPlaceholder" class="PreviewPlaceholder">
-        <span>▶</span>
+        <span class="PreviewPlayIcon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </span>
         <span>Seleccioná un video</span>
       </div>
     </div>
