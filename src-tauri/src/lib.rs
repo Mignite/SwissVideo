@@ -94,6 +94,7 @@ pub struct HistoryEntry {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FfmpegCapabilities {
     gpu: String,
+    video_encoders: Vec<String>,
     libx264: bool,
     libx265: bool,
     libsvtav1: bool,
@@ -392,8 +393,29 @@ fn check_ffmpeg(app: AppHandle) -> FfmpegCapabilities {
                 "cpu"
             };
 
+            // Formato de `ffmpeg -encoders`: " V....D nombre  descripción".
+            // El primer carácter es el tipo (V=video, A=audio, S=subtítulo);
+            // el segundo token es el nombre del encoder. Se excluyen las líneas
+            // de leyenda ("V..... = Video"), cuyo segundo token es "=".
+            let mut video_encoders: Vec<String> = stdout
+                .lines()
+                .filter_map(|line| {
+                    let trimmed = line.trim_start();
+                    if !trimmed.starts_with('V') {
+                        return None;
+                    }
+                    let name = trimmed.split_whitespace().nth(1)?;
+                    if name.contains('=') {
+                        return None;
+                    }
+                    Some(name.to_string())
+                })
+                .collect();
+            video_encoders.sort_by_key(|s| s.to_lowercase());
+
             FfmpegCapabilities {
                 gpu: gpu.into(),
+                video_encoders,
                 libx264: has("libx264"),
                 libx265: has("libx265"),
                 libsvtav1: has("libsvtav1"),
@@ -412,6 +434,7 @@ fn check_ffmpeg(app: AppHandle) -> FfmpegCapabilities {
         }
         Err(_) => FfmpegCapabilities {
             gpu: "cpu".into(),
+            video_encoders: Vec::new(),
             libx264: false,
             libx265: false,
             libsvtav1: false,
@@ -861,8 +884,10 @@ fn build_and_spawn(params: &EncodeParams, ffmpeg: &str) -> Result<(std::process:
             // Una pista, o varias sin mezclar -> cada una como stream de audio separado.
             // Usamos el índice global del stream (0:N) porque Track.index de ffprobe
             // es el índice absoluto, no el relativo entre pistas de audio.
+            // El sufijo '?' hace el mapeo opcional: si la pista no existe en el archivo
+            // (p. ej. archivo reemplazado tras el sondeo), ffmpeg la ignora en vez de abortar.
             for track in selected_tracks {
-                cmd.arg("-map").arg(format!("0:{}", track));
+                cmd.arg("-map").arg(format!("0:{}?", track));
             }
         }
         // Si audio_tracks es Some(vec![]) (vacío), el usuario desmarcó todo intencionalmente -> mudo

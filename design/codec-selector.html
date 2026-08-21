@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwissVideo V2 — Alternativas selector de codec</title>
+<style>
+  :root {
+    --Accent: #E85D4E;
+    --AccentDim: rgba(232, 93, 78, 0.12);
+    --Panel: #1a1a20;
+    --Panel2: #1f1f26;
+    --Border: #26262f;
+    --BorderStrong: #33333d;
+    --Text: #e8e8ec;
+    --Text2: #b0b0b8;
+    --Text3: #8a8a94;
+    --Text4: #6a6a74;
+    --Text5: #55555f;
+    --RadiusSm: 6px;
+    --Mono: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #15151a;
+    color: var(--Text);
+    padding: 36px 24px 80px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 19px; font-weight: 700; }
+  .sub { font-size: 13px; color: var(--Text3); margin-top: 4px; line-height: 1.5; }
+
+  .mock { margin-top: 34px; }
+  .mockHead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .mockTitle { font-size: 14px; font-weight: 700; }
+  .mockTitle .tag {
+    font-size: 10px; font-weight: 600; font-family: var(--Mono);
+    color: var(--Text4); border: 1px solid var(--BorderStrong);
+    padding: 1px 6px; border-radius: 99px; margin-left: 6px; vertical-align: 1px;
+  }
+  .hBadge {
+    font-family: var(--Mono); font-size: 11px; color: var(--Accent);
+    background: var(--AccentDim); border-radius: 99px; padding: 2px 9px;
+  }
+  .mockNote { font-size: 12.5px; color: var(--Text3); margin-top: 5px; line-height: 1.55; max-width: 640px; }
+  .demo {
+    width: 340px; background: var(--Panel); border-radius: 10px;
+    padding: 14px; margin-top: 12px;
+  }
+  .cardHd {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--Text3); margin-bottom: 10px;
+  }
+
+  button { font-family: inherit; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--Accent); outline-offset: 1px; }
+  button[disabled] { cursor: not-allowed; }
+
+  .opt {
+    font-size: 11px; font-weight: 600; font-family: var(--Mono);
+    padding: 3px 10px; border-radius: var(--RadiusSm);
+    border: 1px solid var(--BorderStrong); background: var(--Panel2);
+    color: var(--Text3); transition: border-color .15s, color .15s, background .15s;
+  }
+  .opt:hover { border-color: var(--Text5); color: var(--Text); }
+  .opt.on { border-color: var(--Accent); color: var(--Accent); background: var(--AccentDim); }
+
+  .refRows .row { display: flex; align-items: center; justify-content: space-between; padding: 3px 0; }
+  .refRows .row + .row { border-top: 1px solid var(--Border); }
+  .refRows .lbl { font-size: 12px; font-weight: 600; color: var(--Text2); }
+  .refRows .opts { display: flex; gap: 4px; }
+
+  .seg {
+    display: flex; gap: 3px; background: var(--Panel2);
+    border: 1px solid var(--BorderStrong); border-radius: 8px; padding: 3px;
+  }
+  .seg button {
+    flex: 1; border: none; background: transparent; border-radius: 5px;
+    padding: 6px 0; font-size: 12px; font-weight: 600; color: var(--Text3);
+    font-family: var(--Mono); transition: background .15s, color .15s;
+  }
+  .seg button:hover { color: var(--Text); }
+  .seg button.on { background: var(--AccentDim); color: var(--Accent); }
+  .engineRow { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  .engineRow .lbl { font-size: 11px; color: var(--Text4); }
+  .engineRow .seg { width: 150px; }
+  .engineRow .seg button { padding: 4px 0; font-size: 11px; }
+  .engineRow .seg.solo button { flex: initial; padding: 4px 16px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .famCard {
+    background: var(--Panel2); border: 1px solid var(--BorderStrong);
+    border-radius: 8px; padding: 8px 9px; transition: border-color .15s;
+  }
+  .famCard.sel { border-color: var(--Accent); }
+  .famName { font-family: var(--Mono); font-size: 11px; font-weight: 700; color: var(--Text2); margin-bottom: 6px; }
+  .engRow { display: flex; gap: 4px; }
+  .engBtn {
+    flex: 1; font-size: 10px; font-weight: 600; font-family: var(--Mono);
+    padding: 3px 0; border-radius: 5px; border: 1px solid var(--BorderStrong);
+    background: transparent; color: var(--Text3); transition: border-color .15s, color .15s, background .15s;
+  }
+  .engBtn:hover { color: var(--Text); }
+  .engBtn.on { border-color: var(--Accent); color: var(--Accent); background: var(--AccentDim); }
+  .engBtn.dead { opacity: .3; }
+
+  .dd { position: relative; }
+  .ddBtn {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    background: var(--Panel2); border: 1px solid var(--BorderStrong); border-radius: 8px;
+    padding: 8px 12px; color: var(--Text); font-size: 13px;
+  }
+  .ddBtn:hover { border-color: var(--Text5); }
+  .ddBtn .val { display: flex; align-items: center; gap: 8px; }
+  .ddBtn .fam { font-family: var(--Mono); font-weight: 700; }
+  .engTag {
+    font-family: var(--Mono); font-size: 10px; font-weight: 600;
+    color: var(--Accent); background: var(--AccentDim);
+    padding: 1px 7px; border-radius: 99px;
+  }
+  .ddBtn svg { color: var(--Text4); transition: transform .15s; }
+  .dd.open .ddBtn svg { transform: rotate(180deg); }
+  .menu {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20;
+    background: #20202a; border: 1px solid var(--BorderStrong); border-radius: 10px;
+    padding: 6px; box-shadow: 0 14px 34px rgba(0, 0, 0, .5); display: none;
+  }
+  .dd.open .menu { display: block; }
+  .grpLbl {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--Text4); padding: 7px 8px 3px;
+  }
+  .mi {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    background: none; border: none; border-radius: 6px;
+    padding: 7px 8px; font-size: 12.5px; color: var(--Text2); text-align: left;
+  }
+  .mi:hover { background: rgba(255, 255, 255, .05); color: var(--Text); }
+  .mi .dotOn { width: 7px; height: 7px; border-radius: 50%; background: var(--Accent); visibility: hidden; }
+  .mi.on { color: var(--Accent); }
+  .mi.on .dotOn { visibility: visible; }
+
+  .mxrow {
+    display: grid; grid-template-columns: 1fr 58px 58px;
+    align-items: center; border-top: 1px solid var(--Border);
+  }
+  .mxrow.head { border-top: none; padding-bottom: 6px; }
+  .mxrow.head span {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--Text4); text-align: center;
+  }
+  .mxrow .fam {
+    font-family: var(--Mono); font-size: 12px; font-weight: 600;
+    color: var(--Text2); height: 30px; display: flex; align-items: center;
+  }
+  .cell {
+    justify-self: center; width: 38px; height: 24px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid transparent; transition: border-color .15s;
+  }
+  .cell:hover { border-color: var(--BorderStrong); }
+  .cell .ring {
+    width: 9px; height: 9px; border-radius: 50%;
+    border: 1.5px solid var(--Text5); transition: background .15s, border-color .15s;
+  }
+  .cell.on .ring { background: var(--Accent); border-color: var(--Accent); }
+  .deadCell { justify-self: center; font-size: 11px; color: var(--Text5); font-family: var(--Mono); }
+
+  .pgroups { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pg {
+    display: flex; align-items: stretch; overflow: hidden;
+    background: var(--Panel2); border: 1px solid var(--BorderStrong); border-radius: 7px;
+  }
+  .pg .fname {
+    display: flex; align-items: center; padding: 0 8px;
+    font-family: var(--Mono); font-size: 11px; font-weight: 700; color: var(--Text2);
+    border-right: 1px solid var(--BorderStrong);
+  }
+  .pg button {
+    border: none; background: transparent; color: var(--Text3);
+    font-size: 10.5px; font-weight: 600; font-family: var(--Mono); padding: 5px 9px;
+    transition: background .15s, color .15s;
+  }
+  .pg button + button { border-left: 1px solid var(--BorderStrong); }
+  .pg button:hover { color: var(--Text); }
+  .pg button.on { background: var(--AccentDim); color: var(--Accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Selector de codec — 5 alternativas</h1>
+  <p class="sub">Mismo tema de la app, ancho real de la tarjeta (~340px). Todas interactivas: hacé click y sentí los estados. La altura se mide en vivo. Escenario simulado: GPU NVIDIA detectada (H.264/H.265/AV1 tienen CPU+GPU, VP9 solo CPU). Seleccionado por defecto: H.265 · CPU.</p>
+
+  <section class="mock">
+    <div class="mockHead">
+      <span class="mockTitle">Referencia: diseño actual<span class="tag">4 filas</span></span>
+      <span class="hBadge" data-h></span>
+    </div>
+    <p class="mockNote">El problema que mencionás: cada fila usa space-between entre etiqueta y botones, dejando un vacío horizontal muerto, x4 filas.</p>
+    <div class="demo">
+      <div class="cardHd">Codec de video</div>
+      <div class="refRows selarea" data-selgroup>
+        <div class="row"><span class="lbl">H.264</span><div class="opts"><button class="opt">CPU</button><button class="opt">GPU·NV</button></div></div>
+        <div class="row"><span class="lbl">H.265</span><div class="opts"><button class="opt on">CPU</button><button class="opt">GPU·NV</button></div></div>
+        <div class="row"><span class="lbl">AV1</span><div class="opts"><button class="opt">CPU</button><button class="opt">GPU·NV</button></div></div>
+        <div class="row"><span class="lbl">VP9</span><div class="opts"><button class="opt">CPU</button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mock">
+    <div class="mockHead">
+      <span class="mockTitle">A — Dos niveles: familia + motor<span class="tag">segmentados</span></span>
+      <span class="hBadge" data-h></span>
+    </div>
+    <p class="mockNote">Familia arriba, motor (CPU/GPU) abajo. Máxima compacidad, cero espacio muerto. Débil: el motor de las familias sin seleccionar queda oculto.</p>
+    <div class="demo">
+      <div class="cardHd">Codec de video</div>
+      <div class="selarea">
+        <div class="seg" id="aFams">
+          <button data-fam="H.264">H.264</button>
+          <button data-fam="H.265" class="on">H.265</button>
+          <button data-fam="AV1">AV1</button>
+          <button data-fam="VP9">VP9</button>
+        </div>
+        <div class="engineRow">
+          <span class="lbl">Motor</span>
+          <div class="seg" id="aEng"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mock">
+    <div class="mockHead">
+      <span class="mockTitle">B — Tarjetas 2×2<span class="tag">grid denso</span></span>
+      <span class="hBadge" data-h></span>
+    </div>
+    <p class="mockNote">Cada familia es una mini-tarjeta con su par CPU/GPU dentro. Todo el ancho trabaja; escaneo visual rápido. Es la opción más alta de las compactas.</p>
+    <div class="demo">
+      <div class="cardHd">Codec de video</div>
+      <div class="grid2 selarea" data-selgroup>
+        <div class="famCard"><div class="famName">H.264</div><div class="engRow"><button class="engBtn">CPU</button><button class="engBtn">GPU</button></div></div>
+        <div class="famCard sel"><div class="famName">H.265</div><div class="engRow"><button class="engBtn on">CPU</button><button class="engBtn">GPU</button></div></div>
+        <div class="famCard"><div class="famName">AV1</div><div class="engRow"><button class="engBtn">CPU</button><button class="engBtn">GPU</button></div></div>
+        <div class="famCard"><div class="famName">VP9</div><div class="engRow"><button class="engBtn">CPU</button><button class="engBtn dead" disabled title="Sin variante GPU">GPU</button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mock">
+    <div class="mockHead">
+      <span class="mockTitle">C — Dropdown agrupado<span class="tag">mínimo footprint</span></span>
+      <span class="hBadge" data-h></span>
+    </div>
+    <p class="mockNote">Un solo control colapsado: lo más chico de lejos. Contrapartida: las opciones quedan ocultas tras un click extra.</p>
+    <div class="demo">
+      <div class="cardHd">Codec de video</div>
+      <div class="dd selarea" id="dd">
+        <button class="ddBtn" id="ddBtn">
+          <span class="val"><span class="fam">H.265</span><span class="engTag">CPU</span></span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="menu">
+          <div class="grpLbl">Software · CPU</div>
+          <button class="mi on" data-fam="H.264" data-eng="CPU">H.264<span class="dotOn"></span></button>
+          <button class="mi" data-fam="H.265" data-eng="CPU">H.265<span class="dotOn"></span></button>
+          <button class="mi" data-fam="AV1" data-eng="CPU">AV1<span class="dotOn"></span></button>
+          <button class="mi" data-fam="VP9" data-eng="CPU">VP9<span class="dotOn"></span></button>
+          <div class="grpLbl">NVIDIA NVENC · GPU</div>
+          <button class="mi" data-fam="H.264" data-eng="GPU">H.264<span class="dotOn"></span></button>
+          <button class="mi" data-fam="H.265" data-eng="GPU">H.265<span class="dotOn"></span></button>
+          <button class="mi" data-fam="AV1" data-eng="GPU">AV1<span class="dotOn"></span></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mock">
+    <div class="mockHead">
+      <span class="mockTitle">D — Matriz familia × motor<span class="tag">columnas alineadas</span></span>
+      <span class="hBadge" data-h></span>
+    </div>
+    <p class="mockNote">Misma estructura de filas que el actual, pero el vacío se convierte en columnas CPU/GPU alineadas con indicador circular (no depende solo del color). Densidad de herramienta profesional.</p>
+    <div class="demo">
+      <div class="cardHd">Codec de video</div>
+      <div class="selarea" data-selgroup>
+        <div class="mxrow head"><span></span><span>CPU</span><span>GPU</span></div>
+      <div class="mxrow">
+        <span class="fam">H.264</span>
+        <button class="cell" aria-label="H.264 CPU"><span class="ring"></span></button>
+        <button class="cell" aria-label="H.264 GPU"><span class="ring"></span></button>
+      </div>
+      <div class="mxrow">
+        <span class="fam">H.265</span>
+        <button class="cell on" aria-label="H.265 CPU"><span class="ring"></span></button>
+        <button class="cell" aria-label="H.265 GPU"><span class="ring"></span></button>
+      </div>
+      <div class="mxrow">
+        <span class="fam">AV1</span>
+        <button class="cell" aria-label="AV1 CPU"><span class="ring"></span></button>
+        <button class="cell" aria-label="AV1 GPU"><span class="ring"></span></button>
+      </div>
+      <div class="mxrow">
+        <span class="fam">VP9</span>
+        <button class="cell" aria-label="VP9 CPU"><span class="ring"></span></button>
+        <span class="deadCell">—</span>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mock">
+    <div class="mockHead">
+      <span class="mockTitle">E — Grupos conectados en línea<span class="tag">pills con wrap</span></span>
+      <span class="hBadge" data-h></span>
+    </div>
+    <p class="mockNote">Cada familia es un segmento conectado [familia | CPU | GPU]; fluyen en filas según el ancho. Compacto y con contexto de familia siempre visible.</p>
+    <div class="demo">
+      <div class="cardHd">Codec de video</div>
+      <div class="pgroups selarea" data-selgroup>
+        <div class="pg"><span class="fname">H.264</span><button>CPU</button><button>GPU</button></div>
+        <div class="pg"><span class="fname">H.265</span><button class="on">CPU</button><button>GPU</button></div>
+        <div class="pg"><span class="fname">AV1</span><button>CPU</button><button>GPU</button></div>
+        <div class="pg"><span class="fname">VP9</span><button>CPU</button></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  document.querySelectorAll('[data-selgroup]').forEach(grp => {
+    grp.addEventListener('click', e => {
+      const btn = e.target.closest('button');
+      if (!btn || btn.disabled || !grp.contains(btn)) return;
+      const scope = btn.closest('.selarea');
+      if (!scope) return;
+      scope.querySelectorAll('.on').forEach(x => x.classList.remove('on'));
+      btn.classList.add('on');
+      const card = btn.closest('.famCard');
+      if (card) {
+        card.parentElement.querySelectorAll('.famCard').forEach(c => c.classList.remove('sel'));
+        card.classList.add('sel');
+      }
+    });
+  });
+
+  const AFams = {
+    'H.264': [['CPU', true], ['GPU', true]],
+    'H.265': [['CPU', true], ['GPU', true]],
+    'AV1':   [['CPU', true], ['GPU', true]],
+    'VP9':   [['CPU', true], ['GPU', false]]
+  };
+  const aFams = document.getElementById('aFams');
+  const aEng = document.getElementById('aEng');
+  function renderAEng(fam, keep) {
+    const opts = AFams[fam];
+    aEng.innerHTML = '';
+    aEng.classList.toggle('solo', opts.length === 1);
+    let selected = null;
+    opts.forEach(([name, avail]) => {
+      const b = document.createElement('button');
+      b.textContent = avail ? name : name + ' n/d';
+      b.disabled = !avail;
+      if (avail && ((keep === name) || (!selected && name === 'CPU'))) {
+        b.classList.add('on');
+        selected = name;
+      }
+      aEng.appendChild(b);
+    });
+  }
+  renderAEng('H.265', 'CPU');
+  aEng.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b || b.disabled) return;
+    aEng.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+  });
+  aFams.addEventListener('click', e => {
+    const b = e.target.closest('button[data-fam]');
+    if (!b) return;
+    aFams.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    const prev = aEng.querySelector('.on');
+    renderAEng(b.dataset.fam, prev ? prev.textContent : null);
+  });
+
+  const dd = document.getElementById('dd');
+  const ddBtn = document.getElementById('ddBtn');
+  ddBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    dd.classList.toggle('open');
+  });
+  document.addEventListener('click', () => dd.classList.remove('open'));
+  dd.querySelector('.menu').addEventListener('click', e => {
+    const mi = e.target.closest('.mi');
+    if (!mi) return;
+    dd.querySelectorAll('.mi').forEach(x => x.classList.remove('on'));
+    mi.classList.add('on');
+    ddBtn.querySelector('.fam').textContent = mi.dataset.fam;
+    ddBtn.querySelector('.engTag').textContent = mi.dataset.eng;
+    dd.classList.remove('open');
+  });
+
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.mock').forEach(m => {
+      const demo = m.querySelector('.demo');
+      const badge = m.querySelector('[data-h]');
+      if (!demo || !badge) return;
+      const sel = demo.querySelector('.selarea');
+      const h = sel ? sel.offsetHeight : demo.offsetHeight;
+      badge.textContent = 'selector ≈ ' + h + ' px';
+    });
+  });
+</script>
+</body>
+</html>

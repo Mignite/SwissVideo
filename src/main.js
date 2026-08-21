@@ -45,7 +45,7 @@ const CodecMeta = {
 };
 
 const CodecMap = {
-    libx264: "h264", libx265: "h265", libsvtav1: "av1", "libvpx-vp9": "vp9",
+    libx264: "h264", libx265: "h265", libsvtav1: "av1", libvpx_vp9: "vp9",
     h264_nvenc: "h264", hevc_nvenc: "h265", av1_nvenc: "av1",
     h264_amf: "h264", hevc_amf: "h265", av1_amf: "av1",
     h264_qsv: "h264", hevc_qsv: "h265", av1_qsv: "av1",
@@ -208,7 +208,7 @@ function RenderPresetsList() {
     }
     Object.entries(CurrentPresets).forEach(([Key, Preset]) => {
         const meta = CodecMeta[Preset.codec];
-        const CodecName = meta ? (meta.hwtag ? `${meta.label}·${meta.hwtag}` : `${meta.label} CPU`) : Preset.codec;
+        const CodecName = meta ? (meta.hwtag ? `${meta.label} · GPU` : `${meta.label} · CPU`) : Preset.codec;
         const Resolution = Preset.resolution === 'original' ? 'Original' : Preset.resolution;
         const Item = document.createElement('div');
         Item.className = 'QueueItem';
@@ -280,7 +280,7 @@ function UpdatePresetPreview() {
     if (!Preview) return;
     const s = GetCurrentSettings();
     const meta = CodecMeta[s.codec];
-    const CodecName = meta ? (meta.hwtag ? `${meta.label}·${meta.hwtag}` : meta.label) : s.codec;
+    const CodecName = meta ? (meta.hwtag ? `${meta.label} · GPU` : meta.label) : s.codec;
     const rcLabel = { cq: `CQ ${s.quality}`, vbr: `VBR ${s.bitrate}M`, cbr: `CBR ${s.bitrate}M` }[s.rate_control] || s.rate_control;
     Preview.innerHTML = `Codec: ${CodecName} | ${rcLabel} | ${s.resolution === 'original' ? 'Original' : s.resolution}<br>FPS: ${s.fps === 'original' ? 'Original' : s.fps}`;
 }
@@ -327,8 +327,7 @@ function SaveCurrentPresetFromModal() {
 
 function ApplyPreset(PresetKey, Preset) {
     if (Preset.codec) {
-        const CodecBtn = document.querySelector(`.CodecOpt[data-codec="${Preset.codec}"]`);
-        if (CodecBtn) SelectCodec(Preset.codec);
+        if (AvailableCodecs.has(Preset.codec)) SelectCodec(Preset.codec);
     }
     if (Preset.quality !== undefined) {
         lastSliderQuality = Preset.quality;
@@ -410,57 +409,197 @@ function ResetDefaultPresets() {
     }
 }
 
+let AvailableCodecs = new Set();
+
 function RenderCodecSelector() {
     const Row = document.getElementById("codecRow");
     if (!Row || !FfmpegCaps) return;
     Row.innerHTML = "";
 
-    const gpuType = FfmpegCaps.gpu;
-    const gpuSuffix = { nvidia: "nvenc", amd: "amf", intel: "qsv" }[gpuType];
-    const gpuLabel = { nvidia: "NV", amd: "AMD", intel: "INT" }[gpuType] || "";
+    const Chevron = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+    const gpuSuffix = { nvidia: "nvenc", amd: "amf", intel: "qsv" }[FfmpegCaps.gpu];
 
-    const families = ["H.264", "H.265", "AV1", "VP9"];
-
-    families.forEach(label => {
-        const cpuCodec = Object.keys(CodecMeta).find(k =>
+    const variantsFor = (label) => {
+        const cpu = Object.keys(CodecMeta).find(k =>
             CodecMeta[k].label === label && k.startsWith("lib") && FfmpegCaps[k]);
-        const gpuCodec = gpuSuffix ? Object.keys(CodecMeta).find(k =>
+        const gpu = gpuSuffix ? Object.keys(CodecMeta).find(k =>
             CodecMeta[k].label === label && k.endsWith(gpuSuffix) && FfmpegCaps[k]) : null;
+        return { cpu, gpu };
+    };
 
-        const items = [];
-        if (cpuCodec) items.push({ codec: cpuCodec, text: "CPU" });
-        if (gpuCodec) items.push({ codec: gpuCodec, text: "GPU·" + gpuLabel });
+    const curMeta = CodecMeta[SelectedCodec];
+    const curLabel = curMeta ? curMeta.label : null;
+    const curEngine = SelectedCodec.startsWith("lib") ? "cpu" : "gpu";
 
-        if (items.length === 0) return;
+    const MainFamilies = ["H.264", "H.265", "AV1"];
+    const mainVariants = MainFamilies
+        .map(label => ({ label, v: variantsFor(label) }))
+        .filter(x => x.v.cpu || x.v.gpu);
+    const shown = new Set();
+    mainVariants.forEach(({ v }) => {
+        if (v.cpu) shown.add(v.cpu);
+        if (v.gpu) shown.add(v.gpu);
+    });
+    const otherEncoders = (FfmpegCaps.video_encoders || [])
+        .filter(name => !shown.has(name))
+        .filter(name => {
+            if (name.endsWith("_nvenc") && FfmpegCaps.gpu !== "nvidia") return false;
+            if (name.endsWith("_amf") && FfmpegCaps.gpu !== "amd") return false;
+            if (name.endsWith("_qsv") && FfmpegCaps.gpu !== "intel") return false;
+            if (name.endsWith("_vaapi") || name.endsWith("_v4l2m2m") || name.endsWith("_videotoolbox")) return false;
+            return true;
+        })
+        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 
-        const familyRow = document.createElement("div");
-        familyRow.className = "CodecFamily";
+    AvailableCodecs = new Set();
 
-        const name = document.createElement("span");
-        name.className = "CodecFamLabel";
-        name.textContent = label;
-        familyRow.appendChild(name);
+    const seg = document.createElement("div");
+    seg.className = "CodecSeg";
 
-        const opts = document.createElement("div");
-        opts.className = "CodecFamOpts";
-
-        items.forEach(({ codec, text }) => {
-            const btn = document.createElement("span");
-            btn.className = "CodecOpt" + (codec === SelectedCodec ? " on" : "");
-            btn.dataset.codec = codec;
-            btn.textContent = text;
-            btn.addEventListener("click", () => SelectCodec(codec));
-            opts.appendChild(btn);
+    mainVariants.forEach(({ label, v }) => {
+        if (v.cpu) AvailableCodecs.add(v.cpu);
+        if (v.gpu) AvailableCodecs.add(v.gpu);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "CodecSegBtn" + (curLabel === label ? " on" : "");
+        btn.textContent = label;
+        btn.addEventListener("click", () => {
+            if (curLabel === label) return;
+            SelectCodec(curEngine === "gpu" && v.gpu ? v.gpu : (v.cpu || v.gpu));
         });
-
-        familyRow.appendChild(opts);
-        Row.appendChild(familyRow);
+        seg.appendChild(btn);
     });
 
-    // Select first available if none selected
-    const allCodecs = [...Row.querySelectorAll(".CodecOpt")].map(el => el.dataset.codec);
-    if (!allCodecs.includes(SelectedCodec) && allCodecs.length > 0) {
-        SelectCodec(allCodecs[0]);
+    if (otherEncoders.length > 0) {
+        const wrap = document.createElement("div");
+        wrap.className = "OthersWrap";
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "CodecSegBtn" + (otherEncoders.includes(SelectedCodec) ? " on" : "");
+        btn.innerHTML = `Otros ${Chevron}`;
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            wrap.classList.toggle("open");
+        });
+        const menu = document.createElement("div");
+        menu.className = "OthersMenu";
+        const searchWrap = document.createElement("div");
+        searchWrap.className = "OthersSearchWrap";
+        const search = document.createElement("input");
+        search.type = "text";
+        search.className = "OthersSearch";
+        search.placeholder = "Buscar encoder…";
+        search.setAttribute("aria-label", "Buscar encoder");
+        search.addEventListener("click", (e) => e.stopPropagation());
+        search.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") { e.stopPropagation(); wrap.classList.remove("open"); }
+            else e.stopPropagation();
+        });
+        searchWrap.appendChild(search);
+        menu.appendChild(searchWrap);
+        const list = document.createElement("div");
+        list.className = "OthersList";
+        const emptyMsg = document.createElement("div");
+        emptyMsg.className = "OthersEmpty";
+        emptyMsg.textContent = "Sin resultados";
+        otherEncoders.forEach(name => {
+            AvailableCodecs.add(name);
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "OthersItem";
+            if (SelectedCodec === name) item.classList.add("on");
+            item.dataset.encoder = name;
+            item.innerHTML = `<span>${escapeHtml(name)}</span><span class="OthersDot"></span>`;
+            item.addEventListener("click", () => {
+                if (SelectedCodec !== name) SelectCodec(name);
+                else wrap.classList.remove("open");
+            });
+            list.appendChild(item);
+        });
+        menu.appendChild(list);
+        menu.appendChild(emptyMsg);
+        search.addEventListener("input", () => {
+            const q = search.value.toLowerCase().trim();
+            let visible = 0;
+            list.querySelectorAll(".OthersItem").forEach(item => {
+                const match = !q || item.dataset.encoder.toLowerCase().includes(q);
+                item.style.display = match ? "" : "none";
+                if (match) visible++;
+            });
+            emptyMsg.style.display = visible === 0 ? "block" : "none";
+        });
+        btn.addEventListener("click", () => {
+            if (wrap.classList.contains("open")) {
+                requestAnimationFrame(() => search.focus());
+            } else {
+                search.value = "";
+                search.dispatchEvent(new Event("input"));
+            }
+        });
+        wrap.appendChild(btn);
+        wrap.appendChild(menu);
+        seg.appendChild(wrap);
+    }
+
+    Row.appendChild(seg);
+
+    if (curLabel) {
+        const v = variantsFor(curLabel);
+        const engines = [];
+        if (v.cpu) engines.push({ key: "cpu", codec: v.cpu, text: "CPU" });
+        if (v.gpu) engines.push({ key: "gpu", codec: v.gpu, text: "GPU" });
+        if (engines.length > 0) {
+            const engRow = document.createElement("div");
+            engRow.className = "EngineRow";
+            const lbl = document.createElement("span");
+            lbl.className = "EngineLbl";
+            lbl.textContent = "Motor";
+            const engSeg = document.createElement("div");
+            engSeg.className = "CodecSeg EngineSeg";
+            engines.forEach(({ key, codec, text }) => {
+                AvailableCodecs.add(codec);
+                const b = document.createElement("button");
+                b.type = "button";
+                b.className = "CodecSegBtn" + (SelectedCodec === codec ? " on" : "");
+                b.textContent = text;
+                b.addEventListener("click", () => {
+                    if (SelectedCodec !== codec) SelectCodec(codec);
+                });
+                engSeg.appendChild(b);
+            });
+            engRow.appendChild(lbl);
+            engRow.appendChild(engSeg);
+            Row.appendChild(engRow);
+        }
+    }
+
+    if (!RenderCodecSelector._bound) {
+        RenderCodecSelector._bound = true;
+        document.addEventListener("click", (e) => {
+            document.querySelectorAll(".OthersWrap.open").forEach(w => {
+                if (!w.contains(e.target)) {
+                    w.classList.remove("open");
+                    const s = w.querySelector(".OthersSearch");
+                    if (s) { s.value = ""; s.dispatchEvent(new Event("input")); }
+                }
+            });
+        });
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") document.querySelectorAll(".OthersWrap.open").forEach(w => {
+                w.classList.remove("open");
+                const s = w.querySelector(".OthersSearch");
+                if (s) { s.value = ""; s.dispatchEvent(new Event("input")); }
+            });
+        });
+    }
+
+    if (!AvailableCodecs.has(SelectedCodec)) {
+        for (const label of MainFamilies) {
+            const v = variantsFor(label);
+            if (v.cpu || v.gpu) { SelectCodec(v.cpu || v.gpu); return; }
+        }
+        const first = AvailableCodecs.values().next().value;
+        if (first) SelectCodec(first);
     }
 }
 
@@ -582,7 +721,8 @@ function HandleBackendMessage(Data) {
                 CurrentVideoInfo = Data.info;
                 CurrentVideoInfo.path = CurrentVideoPath;
                 UpdateVideoInfoDisplay(CurrentVideoInfo);
-                UpdateAudioTracks(CurrentVideoInfo);
+                const ActiveItem = FileQueue.find(f => f.path === CurrentVideoPath);
+                UpdateAudioTracks(CurrentVideoInfo, ActiveItem ? ActiveItem.audio_tracks : null);
                 UpdateEstimatedTotalFrames();
                 AddLog(`Archivo cargado: ${Data.info.filename}`, "success");
             } else if (!Data.success) {
@@ -700,7 +840,7 @@ function UpdateVideoInfoDisplay(Info) {
     UpdateNamePreview();
 }
 
-function UpdateAudioTracks(Info) {
+function UpdateAudioTracks(Info, savedTracks) {
     const Container = document.getElementById("audioTracksContainer");
     if (!Container) return;
     Container.innerHTML = "";
@@ -726,18 +866,20 @@ function UpdateAudioTracks(Info) {
     });
 
     // Restaurar selección guardada del queue item, o marcar primera pista por defecto
-    if (PendingAudioRestoreTracks && PendingAudioRestoreTracks.length > 0) {
-        PendingAudioRestoreTracks.forEach(trackIdx => {
+    if (Array.isArray(savedTracks)) {
+        // [] = mudo explícito; [1,2] = pistas elegidas
+        savedTracks.forEach(trackIdx => {
             const cb = Container.querySelector(`.audio-track-cb[data-track="${trackIdx}"]`);
             if (cb) cb.checked = true;
         });
-        PendingAudioRestoreTracks = null;
     } else {
         // Marcar la primera pista de audio disponible (no buscar data-track="0"
         // porque stream 0 suele ser video, no audio)
         const FirstCb = Container.querySelector('.audio-track-cb');
         if (FirstCb) FirstCb.checked = true;
     }
+
+    SaveAudioToCurrentQueueItem();
 }
 
 function UpdateVideoPreview(videoPath) {
@@ -958,7 +1100,7 @@ function UpdateNamePreview() {
     const Template = document.getElementById("nameTemplate")?.value || "{nombre}_{codec}_q{qp}";
     let Preview = Template;
     Preview = Preview.replace("{nombre}", CurrentVideoInfo.filename.replace(/\.[^/.]+$/, ""));
-    Preview = Preview.replace("{codec}", CodecMap[SelectedCodec] || "h265");
+    Preview = Preview.replace("{codec}", CodecMap[SelectedCodec] || SelectedCodec);
     Preview = Preview.replace("{qp}", document.getElementById("qualitySlider")?.value || "23");
     const Res = document.getElementById("resolutionSelect")?.value;
     Preview = Preview.replace("{res}", Res === "original" ? "orig" : (Res?.split("x")[1] + "p") || "orig");
@@ -1033,7 +1175,7 @@ function SelectCodec(CodecValue) {
     UpdateNamePreview();
     UpdateEstimate();
     const meta = CodecMeta[CodecValue];
-    const displayName = meta ? (meta.hwtag ? `${meta.label}·${meta.hwtag}` : `${meta.label} CPU`) : CodecValue;
+    const displayName = meta ? (meta.hwtag ? `${meta.label} · GPU` : `${meta.label} · CPU`) : CodecValue;
     AddLog(`Codec: ${displayName}`, "info");
     SaveCodecUsage(CodecValue);
     ClearActivePresetIfCustomized();
@@ -1439,7 +1581,6 @@ let FileQueue = [];
 let QueueProcessing = false;
 let StopRequested = false;
 let CurrentQueueSelectedIndex = -1;
-let PendingAudioRestoreTracks = null;
 
 function AddToQueue(filePath) {
     if (!filePath) return;
@@ -1454,9 +1595,30 @@ function AddToQueue(filePath) {
     if (CurrentQueueSelectedIndex === -1) {
         SelectVideoFromQueue(FileQueue.length - 1);
     } else {
+        ProbeQueueItemAudio(FileQueue[FileQueue.length - 1]);
         RenderQueueList();
     }
     AddLog(`📋 Añadido a cola: ${FileQueue[FileQueue.length-1].name}`, "info");
+}
+
+function ProbeQueueItemAudio(item) {
+    if (!item || item.audio_tracks !== null) return;
+    invoke("get_video_info", { path: item.path })
+        .then((info) => {
+            if (!FileQueue.includes(item)) return;
+            if (item.audio_tracks !== null) return;
+            const audio = info && info.audio_tracks;
+            if (audio && audio.length > 0) {
+                const first = audio[0];
+                item.audio_tracks = [first.index];
+                item.audio_track_names = [first.title || `Track ${first.index}`];
+            } else {
+                item.audio_tracks = [];
+                item.audio_track_names = [];
+            }
+            RenderQueueList();
+        })
+        .catch(() => {});
 }
 
 function RemoveFromQueue(index) {
@@ -1507,6 +1669,8 @@ function ClearCurrentVideo() {
     if (cutCustomBtn) cutCustomBtn.classList.remove("on");
     if (fullPane) fullPane.style.display = "block";
     if (customPane) customPane.style.display = "none";
+
+    RenderQueueList();
 }
 
 function RenderQueueList() {
@@ -1524,18 +1688,20 @@ function RenderQueueList() {
     }
 
     container.innerHTML = FileQueue.map((item, idx) => {
-        const CutBadge = (item.cut_start || item.cut_end)
-            ? `<span style="font-size:9px;color:var(--Accent);display:block;margin-top:2px;font-family:monospace">${Icons.scissors} ${item.cut_start || '00:00:00'} → ${item.cut_end || 'fin'}</span>`
-            : '';
-        const AudioBadge = (item.audio_tracks && item.audio_tracks.length > 0)
-            ? `<span style="font-size:9px;color:var(--Warn);display:block;margin-top:2px;font-family:monospace">${Icons.audio} ${(item.audio_track_names || item.audio_tracks.map(i => `Track ${i + 1}`)).join(', ')}</span>`
-            : '';
+        const CutBadge = `<span style="font-size:9px;color:var(--Accent);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.scissors} ${item.cut_start || '00:00:00'} → ${item.cut_end || 'fin'}</span>`;
+        const AudioBadge = Array.isArray(item.audio_tracks)
+            ? (item.audio_tracks.length > 0
+                ? `<span style="font-size:9px;color:var(--Warn);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio} ${(item.audio_track_names || item.audio_tracks.map(i => `Track ${i + 1}`)).join(', ')}</span>`
+                : `<span style="font-size:9px;color:var(--Text3);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio} Sin audio</span>`)
+            : `<span style="font-size:9px;color:var(--Text3);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio}</span>`;
         return `
             <div class="QueueItem ${idx === CurrentQueueSelectedIndex ? 'active' : ''}" data-queue-index="${idx}">
                 <div style="flex:1;min-width:0;overflow:hidden">
                     <span class="QueueItemName" title="${item.path}">${item.name}</span>
-                    ${CutBadge}
-                    ${AudioBadge}
+                    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:2px">
+                        ${CutBadge}
+                        ${AudioBadge}
+                    </div>
                 </div>
                 <button class="QueueItemRemove" data-index="${idx}" title="Quitar de la cola">${Icons.close}</button>
             </div>
@@ -1549,8 +1715,6 @@ function SelectVideoFromQueue(index) {
 
     CurrentQueueSelectedIndex = index;
     AddLog(`🎬 Seleccionado: ${item.name}`, "info");
-
-    PendingAudioRestoreTracks = (item.audio_tracks && item.audio_tracks.length > 0) ? item.audio_tracks : null;
 
     LoadVideoInfo(item.path);
     RestoreCutStateFromItem(item);
@@ -1578,7 +1742,7 @@ function SaveAudioToCurrentQueueItem() {
     if (!CurrentItem) return;
     const SelectedCbs = [...document.querySelectorAll('.audio-track-cb:checked')];
     const SelectedTracks = SelectedCbs.map(Cb => parseInt(Cb.dataset.track));
-    CurrentItem.audio_tracks = SelectedTracks.length > 0 ? SelectedTracks : null;
+    CurrentItem.audio_tracks = SelectedTracks;
     if (CurrentVideoInfo && CurrentVideoInfo.audio_tracks) {
         CurrentItem.audio_track_names = SelectedCbs.map(Cb => {
             const idx = parseInt(Cb.dataset.track);
@@ -1686,6 +1850,8 @@ async function ProcessQueue() {
         };
         if (file.audio_tracks && file.audio_tracks.length > 0) {
             Item.audio_tracks = file.audio_tracks;
+        } else if (Array.isArray(file.audio_tracks)) {
+            Item.audio_tracks = [];
         }
         return Item;
     });

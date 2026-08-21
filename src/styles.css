@@ -32,6 +32,7 @@
   --Space-3: 12px;
   --Space-4: 16px;
   --Space-5: 24px;
+  --Mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 
 body {
@@ -204,17 +205,50 @@ body {
 
 /* ===== CODEC ===== */
 .CodecRow { padding: 0; }
-.CodecFamily { display: flex; align-items: center; justify-content: space-between; padding: 3px 0; }
-.CodecFamily + .CodecFamily { border-top: 1px solid var(--Border); }
-.CodecFamLabel { font-size: 12px; font-weight: 600; color: var(--Text2); }
-.CodecFamOpts { display: flex; gap: 4px; }
-.CodecOpt {
-  padding: 3px 10px; border-radius: var(--RadiusSm); font-size: 11px; font-weight: 600;
-  border: 1px solid var(--BorderStrong); background: var(--Panel2); color: var(--Text3);
-  cursor: pointer; user-select: none; transition: border-color 0.15s, color 0.15s, background 0.15s;
+.CodecSeg {
+  display: flex; gap: 3px; align-items: stretch;
+  background: var(--Panel2); border: 1px solid var(--BorderStrong);
+  border-radius: 8px; padding: 3px;
 }
-.CodecOpt:hover { border-color: var(--Text5); color: var(--Text); }
-.CodecOpt.on { border-color: var(--Accent); color: var(--Accent); background: var(--AccentDim); }
+.CodecSegBtn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  border: none; background: transparent; border-radius: 5px;
+  padding: 6px 4px; font-size: 12px; font-weight: 600; font-family: var(--Mono);
+  color: var(--Text3); cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.CodecSegBtn:hover { color: var(--Text); }
+.CodecSegBtn.on { background: var(--AccentDim); color: var(--Accent); }
+.CodecSegBtn:focus-visible { outline: 2px solid var(--Accent); outline-offset: 1px; }
+.EngineRow { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.EngineLbl { font-size: 11px; color: var(--Text4); }
+.EngineSeg { width: 150px; }
+.OthersWrap { position: relative; flex: 1; display: flex; }
+.OthersWrap .CodecSegBtn { width: 100%; }
+.OthersMenu {
+  position: absolute; top: calc(100% + 6px); right: 0; min-width: 170px; max-height: 260px; overflow-y: auto; z-index: 40;
+  background: #20202a; border: 1px solid var(--BorderStrong); border-radius: 10px;
+  padding: 6px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5); display: none;
+}
+.OthersWrap.open .OthersMenu { display: block; }
+.OthersSearchWrap { position: sticky; top: -6px; background: #20202a; padding: 2px 0 6px; z-index: 1; }
+.OthersSearch {
+  width: 100%; background: var(--Panel2); border: 1px solid var(--BorderStrong); border-radius: 6px;
+  padding: 6px 8px; font-size: 12px; color: var(--Text); font-family: var(--Mono);
+}
+.OthersSearch::placeholder { color: var(--Text4); }
+.OthersSearch:focus { outline: none; border-color: var(--Accent); }
+.OthersList { display: contents; }
+.OthersEmpty { font-size: 12px; color: var(--Text4); text-align: center; padding: 10px 8px; display: none; }
+.OthersItem {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  background: none; border: none; border-radius: 6px; padding: 7px 8px;
+  font-size: 12.5px; color: var(--Text2); cursor: pointer; text-align: left;
+}
+.OthersItem:hover { background: rgba(255, 255, 255, 0.05); color: var(--Text); }
+.OthersItem:focus-visible { outline: 2px solid var(--Accent); outline-offset: -1px; }
+.OthersItem.on { color: var(--Accent); }
+.OthersDot { width: 7px; height: 7px; border-radius: 50%; background: var(--Accent); visibility: hidden; flex-shrink: 0; }
+.OthersItem.on .OthersDot { visibility: visible; }
 .Cbtn {
   position: relative;
   padding: 7px 16px;
