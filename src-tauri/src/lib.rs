@@ -111,6 +111,102 @@ pub struct FfmpegCapabilities {
     usage: HashMap<String, u32>,
 }
 
+// Deserializador flexible para audio_volumes: acepta mapa {"0":150} o array [150,50]
+// Claves siempre como u32 (índice global ffprobe), valores 0-200 (100 = 0dB)
+fn deserialize_audio_volumes<'de, D>(deserializer: D) -> Result<Option<HashMap<u32, f32>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let opt = Option::<serde_json::Value>::deserialize(deserializer)?;
+    match opt {
+        None => Ok(None),
+        Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::Object(map)) => {
+            let mut out = HashMap::new();
+            for (k, v) in map {
+                let key: u32 = k.parse().map_err(serde::de::Error::custom)?;
+                let val = match v {
+                    serde_json::Value::Number(n) => n.as_f64().ok_or_else(|| serde::de::Error::custom("invalid number"))? as f32,
+                    serde_json::Value::String(s) => s.parse::<f32>().map_err(serde::de::Error::custom)?,
+                    _ => return Err(serde::de::Error::custom("volume value must be number")),
+                };
+                out.insert(key, val);
+            }
+            if out.is_empty() { Ok(None) } else { Ok(Some(out)) }
+        }
+        Some(serde_json::Value::Array(arr)) => {
+            let mut out = HashMap::new();
+            for (idx, v) in arr.into_iter().enumerate() {
+                let val = match v {
+                    serde_json::Value::Number(n) => n.as_f64().ok_or_else(|| serde::de::Error::custom("invalid number"))? as f32,
+                    serde_json::Value::String(s) => s.parse::<f32>().map_err(serde::de::Error::custom)?,
+                    serde_json::Value::Null => continue,
+                    _ => return Err(serde::de::Error::custom("volume value must be number")),
+                };
+                out.insert(idx as u32, val);
+            }
+            if out.is_empty() { Ok(None) } else { Ok(Some(out)) }
+        }
+        Some(other) => Err(serde::de::Error::custom(format!("audio_volumes must be map or array, got {}", other))),
+    }
+}
+
+fn volume_to_gain(vol: f32) -> f32 {
+    vol.clamp(0.0, 200.0) / 100.0
+}
+
+fn format_gain(gain: f32) -> String {
+    // 4 decimales máximo, sin ceros trailing
+    let s = format!("{:.4}", gain);
+    let trimmed = s.trim_end_matches('0').trim_end_matches('.');
+    if trimmed.is_empty() { "0".into() } else { trimmed.to_string() }
+}
+
+fn gain_for_track(track: u32, volumes: Option<&HashMap<u32, f32>>) -> Option<f32> {
+    volumes?.get(&track).copied().map(volume_to_gain).filter(|&g| (g - 1.0).abs() > 0.001)
+}
+
+fn has_any_volume_needed(volumes: Option<&HashMap<u32, f32>>) -> bool {
+    match volumes {
+        None => false,
+        Some(m) => m.values().any(|&v| (volume_to_gain(v) - 1.0).abs() > 0.001),
+    }
+}
+
+// Genera filter_complex para caso amix con volumen por pista.
+// Ej: [0:1]volume=1.5[a0];[0:2]volume=0.5[a1];[a0][a1]amix=inputs=2:duration=longest:normalize=1[aout]
+fn build_amix_filter_complex(tracks: &[u32], volumes: Option<&HashMap<u32, f32>>) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    let mut amix_inputs = String::new();
+    for (idx, &track) in tracks.iter().enumerate() {
+        let label = format!("a{}", idx);
+        if let Some(g) = gain_for_track(track, volumes) {
+            parts.push(format!("[0:{}]volume={}[{}]", track, format_gain(g), label));
+        } else {
+            parts.push(format!("[0:{}]anull[{}]", track, label));
+        }
+        amix_inputs.push_str(&format!("[{}]", label));
+    }
+    format!("{};{}amix=inputs={}:duration=longest:normalize=1[aout]", parts.join(";"), amix_inputs, tracks.len())
+}
+
+// Caso sin mix pero con volúmenes: genera filter_complex con volume/anull por pista.
+// Retorna None si ningún track necesita volumen (optimización).
+fn build_separate_filter_complex(tracks: &[u32], volumes: Option<&HashMap<u32, f32>>) -> Option<String> {
+    let any = tracks.iter().any(|&t| gain_for_track(t, volumes).is_some());
+    if !any {
+        return None;
+    }
+    let parts: Vec<String> = tracks.iter().enumerate().map(|(idx, &track)| {
+        if let Some(g) = gain_for_track(track, volumes) {
+            format!("[0:{}]volume={}[a{}]", track, format_gain(g), idx)
+        } else {
+            format!("[0:{}]anull[a{}]", track, idx)
+        }
+    }).collect();
+    Some(parts.join(";"))
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct EncodeParams {
     input_path: String,
@@ -128,6 +224,8 @@ pub struct EncodeParams {
     audio_tracks: Option<Vec<u32>>,
     custom_mix: Option<bool>,
     output_override: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_audio_volumes")]
+    audio_volumes: Option<HashMap<u32, f32>>,
 }
 
 #[derive(Serialize)]
@@ -145,6 +243,8 @@ pub struct QueueItem {
     cut_end: Option<String>,
     audio_tracks: Option<Vec<u32>>,
     output_override: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_audio_volumes")]
+    audio_volumes: Option<HashMap<u32, f32>>,
 }
 
 // Parámetros compartidos por todos los ítems de la cola (sin input_path/output_dir/cortes,
@@ -161,6 +261,8 @@ pub struct QueueBaseParams {
     name_template: Option<String>,
     audio_tracks: Option<Vec<u32>>,
     custom_mix: Option<bool>,
+    #[serde(default, deserialize_with = "deserialize_audio_volumes")]
+    audio_volumes: Option<HashMap<u32, f32>>,
 }
 
 // ==================== UTILIDADES FFMPEG ====================
@@ -381,7 +483,9 @@ fn check_ffmpeg(app: AppHandle) -> FfmpegCapabilities {
     match output {
         Ok(out) => {
             let stdout = String::from_utf8_lossy(&out.stdout);
-            let has = |name: &str| stdout.contains(name);
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            let combined = format!("{}{}", stdout, stderr);
+            let has = |name: &str| combined.contains(name);
 
             let gpu = if has("h264_amf") || has("hevc_amf") {
                 "amd"
@@ -397,7 +501,7 @@ fn check_ffmpeg(app: AppHandle) -> FfmpegCapabilities {
             // El primer carácter es el tipo (V=video, A=audio, S=subtítulo);
             // el segundo token es el nombre del encoder. Se excluyen las líneas
             // de leyenda ("V..... = Video"), cuyo segundo token es "=".
-            let mut video_encoders: Vec<String> = stdout
+            let mut video_encoders: Vec<String> = combined
                 .lines()
                 .filter_map(|line| {
                     let trimmed = line.trim_start();
@@ -620,17 +724,7 @@ fn process_name_template(
     resolution: &str,
     fps: &str,
 ) -> String {
-    let codec_short = if codec.contains("264") {
-        "h264"
-    } else if codec.contains("265") || codec.contains("hevc") {
-        "h265"
-    } else if codec.contains("av1") {
-        "av1"
-    } else if codec.contains("vp9") {
-        "vp9"
-    } else {
-        "h265"
-    };
+    let codec_short = codec;
 
     let res_short = if resolution == "original" || resolution.is_empty() {
         "orig".to_string()
@@ -860,44 +954,91 @@ fn build_and_spawn(params: &EncodeParams, ffmpeg: &str) -> Result<(std::process:
         .arg("-map")
         .arg("0:v:0");
 
-    // Pistas de audio seleccionadas (índice 0-based, coincide con "0:a:N" de ffmpeg)
+    // Pistas de audio seleccionadas (índice global de stream, coincide con "0:N" de ffmpeg)
     let mix_down = params.custom_mix.unwrap_or(false);
-    let mut audio_filter_label: Option<&str> = None;
+    let volumes = params.audio_volumes.as_ref();
+    // true si algún volumen !=100 (con clamp 0-200)
+    let has_volumes = has_any_volume_needed(volumes);
 
     if let Some(ref selected_tracks) = params.audio_tracks {
         if selected_tracks.len() > 1 && mix_down {
-            // Varias pistas + "normalizar volumen al mezclar" -> mezclarlas en una sola
-            // selected_tracks contiene índices globales de stream (ffprobe "index"),
-            // por lo que usamos 0:N (global) en lugar de 0:a:N (audio-relativo).
-            let inputs: String = selected_tracks
-                .iter()
-                .map(|t| format!("[0:{}]", t))
-                .collect();
-            let filter = format!(
-                "{}amix=inputs={}:duration=longest:normalize=1[aout]",
-                inputs,
-                selected_tracks.len()
-            );
+            // Varias pistas + mezcla: generar filter_complex con volume por pista + amix.
+            // Si hay volúmenes !=100, cada pista pasa por volume=X o anull antes de amix.
+            // Si no hay volúmenes, se usa amix simple (compatibilidad).
+            let filter = if has_volumes {
+                build_amix_filter_complex(selected_tracks, volumes)
+            } else {
+                let inputs: String = selected_tracks
+                    .iter()
+                    .map(|t| format!("[0:{}]", t))
+                    .collect();
+                format!(
+                    "{}amix=inputs={}:duration=longest:normalize=1[aout]",
+                    inputs,
+                    selected_tracks.len()
+                )
+            };
             cmd.args(["-filter_complex", &filter]);
-            audio_filter_label = Some("[aout]");
+            cmd.arg("-map").arg("[aout]");
         } else if !selected_tracks.is_empty() {
-            // Una pista, o varias sin mezclar -> cada una como stream de audio separado.
-            // Usamos el índice global del stream (0:N) porque Track.index de ffprobe
-            // es el índice absoluto, no el relativo entre pistas de audio.
-            // El sufijo '?' hace el mapeo opcional: si la pista no existe en el archivo
-            // (p. ej. archivo reemplazado tras el sondeo), ffmpeg la ignora en vez de abortar.
-            for track in selected_tracks {
-                cmd.arg("-map").arg(format!("0:{}?", track));
+            // Una pista o varias sin mezclar: cada una como stream separado.
+            // Si hay volúmenes distintos de 100, usar filter_complex con volume/anull por pista.
+            if has_volumes && selected_tracks.iter().any(|t| gain_for_track(*t, volumes).is_some()) {
+                if let Some(filter) = build_separate_filter_complex(selected_tracks, volumes) {
+                    cmd.args(["-filter_complex", &filter]);
+                    for idx in 0..selected_tracks.len() {
+                        cmd.arg("-map").arg(format!("[a{}]", idx));
+                    }
+                } else {
+                    for track in selected_tracks {
+                        cmd.arg("-map").arg(format!("0:{}?", track));
+                    }
+                }
+            } else {
+                for track in selected_tracks {
+                    cmd.arg("-map").arg(format!("0:{}?", track));
+                }
             }
         }
-        // Si audio_tracks es Some(vec![]) (vacío), el usuario desmarcó todo intencionalmente -> mudo
+        // Si audio_tracks es Some(vec![]) -> mudo, no mapear nada
     } else {
-        // Si audio_tracks es None -> por defecto mapear audio por defecto/todas las pistas de audio
-        cmd.arg("-map").arg("0:a?");
-    }
-
-    if let Some(label) = audio_filter_label {
-        cmd.arg("-map").arg(label);
+        // audio_tracks None -> por defecto todas las pistas de audio
+        if has_volumes {
+            // Volúmenes sin selección explícita: filtrar solo tracks con volumen !=100.
+            // Si el mapa referencia índices concretos (ej {"1":150}), los mapeamos filtrados.
+            // Si no hay tracks con volumen distinto, usar 0:a? clásico.
+            let needed: Vec<(u32, f32)> = volumes
+                .unwrap()
+                .iter()
+                .filter_map(|(&k, &v)| {
+                    let g = volume_to_gain(v);
+                    if (g - 1.0).abs() > 0.001 { Some((k, g)) } else { None }
+                })
+                .collect();
+            if needed.is_empty() {
+                cmd.arg("-map").arg("0:a?");
+            } else if needed.len() == 1 {
+                // Un solo track con volumen y selección por defecto: usar filter_complex simple
+                let (track, gain) = needed[0];
+                let filter = format!("[0:{}]volume={}[a0]", track, format_gain(gain));
+                cmd.args(["-filter_complex", &filter]);
+                cmd.arg("-map").arg("[a0]");
+                // Nota: esto mapea solo el track con volumen. Para mantener también el resto
+                // de audios sin filtrar, el frontend debería enviar audio_tracks explícito.
+                // Si se quiere preservar 0:a? restante, se podría añadir "-map 0:a?" adicional,
+                // pero duplicaría el track filtrado. Se deja mapeo exclusivo intencionalmente.
+            } else {
+                let parts: Vec<String> = needed.iter().enumerate().map(|(idx, (track, gain))| {
+                    format!("[0:{}]volume={}[a{}]", track, format_gain(*gain), idx)
+                }).collect();
+                cmd.args(["-filter_complex", &parts.join(";")]);
+                for idx in 0..needed.len() {
+                    cmd.arg("-map").arg(format!("[a{}]", idx));
+                }
+            }
+        } else {
+            cmd.arg("-map").arg("0:a?");
+        }
     }
 
     let actual_codec = &params.codec;
@@ -971,7 +1112,7 @@ fn build_and_spawn(params: &EncodeParams, ffmpeg: &str) -> Result<(std::process:
         cmd.args(["-quality", &q]);
     } else if is_nvidia {
         let nv_map = [1, 1, 2, 3, 4, 5, 6, 7, 7];
-        cmd.args(["-preset", &nv_map[idx].to_string()]);
+        cmd.args(["-preset", &format!("p{}", nv_map[idx])]);
     } else if is_qsv {
         // QSV only accepts 7 presets: veryfast..veryslow
         let qsv_idx = if idx <= 2 { 2 } else { idx.min(8) };
@@ -982,9 +1123,8 @@ fn build_and_spawn(params: &EncodeParams, ffmpeg: &str) -> Result<(std::process:
         cmd.args(["-preset", &svt_preset.to_string()]);
         // Default tune=1 (PSNR) wastes bits; tune=0 (VQ) prioritizes visual quality
         cmd.args(["-svtav1-params", "tune=0"]);
-    } else if actual_codec == "libvpx-vp9" {
-        // libvpx-vp9: pass quality/speed via -cpu-used (0=best, 5=fast, 16=realtime)
-        let vp9_cpu = idx.min(5) as u32;
+    } else if actual_codec == "libvpx-vp9" || actual_codec == "libvpx_vp9" {
+        let vp9_cpu = (5 - idx.min(5) as u32).min(5);
         cmd.args(["-cpu-used", &vp9_cpu.to_string()]);
     } else {
         cmd.args(["-preset", preset_names[idx]]);
@@ -1300,6 +1440,10 @@ async fn start_queue(
                     .or_else(|| base_params.audio_tracks.clone()),
                 custom_mix: base_params.custom_mix,
                 output_override: item.output_override.clone(),
+                audio_volumes: item
+                    .audio_volumes
+                    .clone()
+                    .or_else(|| base_params.audio_volumes.clone()),
             };
 
             let (mut child, output_path) = match build_and_spawn(&params, &ffmpeg) {
@@ -1542,6 +1686,111 @@ fn save_codec_usage(state: State<'_, AppState>, usage: HashMap<String, u32>) -> 
     Ok(())
 }
 
+// ========== AUDIO PREVIEW: extracción a WAV temporal ==========
+
+#[derive(Clone, Serialize)]
+pub struct AudioPreviewResult {
+    track: u32,
+    wav_path: String,
+}
+
+fn hash_path(path: &str) -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    path.hash(&mut hasher);
+    // mezclar mtime/size si existe para invalidar caché al cambiar archivo
+    if let Ok(meta) = std::fs::metadata(path) {
+        if let Ok(m) = meta.modified() {
+            if let Ok(d) = m.duration_since(std::time::UNIX_EPOCH) {
+                d.as_secs().hash(&mut hasher);
+            }
+        }
+        meta.len().hash(&mut hasher);
+    }
+    format!("{:016x}", hasher.finish())
+}
+
+#[tauri::command]
+fn extract_audio_preview(path: String, tracks: Vec<u32>) -> Result<Vec<AudioPreviewResult>, String> {
+    if tracks.is_empty() {
+        return Ok(vec![]);
+    }
+    if !std::path::Path::new(&path).exists() {
+        return Err("Archivo no existe".into());
+    }
+    // Limitar tracks para no DOS el sistema
+    if tracks.len() > 8 {
+        return Err("Demasiadas pistas (máx 8)".into());
+    }
+
+    let ffmpeg = find_tool("ffmpeg");
+    let tmp_base = std::env::temp_dir().join("swissvideo_preview");
+    std::fs::create_dir_all(&tmp_base).map_err(|e| e.to_string())?;
+
+    let h = hash_path(&path);
+    let mut results = Vec::new();
+
+    for &track in &tracks {
+        let out = tmp_base.join(format!("sv_{}_{}.wav", h, track));
+        // Reusar si ya existe y es más reciente que el source (evita re-encode)
+        let reuse = if out.exists() {
+            if let (Ok(src_meta), Ok(out_meta)) = (std::fs::metadata(&path), std::fs::metadata(&out)) {
+                if let (Ok(src_m), Ok(out_m)) = (src_meta.modified(), out_meta.modified()) {
+                    out_m >= src_m && out_meta.len() > 1024
+                } else { false }
+            } else { false }
+        } else { false };
+
+        if !reuse {
+            // ffmpeg -y -i input -map 0:<track_idx> -c:a pcm_s16le -vn -ar 48000
+            let status = create_command(&ffmpeg)
+                .args(["-y", "-v", "error", "-i", &path])
+                .arg("-map").arg(format!("0:{}", track))
+                .args(["-c:a", "pcm_s16le", "-vn"])
+                .arg(&out)
+                .output()
+                .map_err(|e| format!("ffmpeg error: {}", e))?;
+            if !status.status.success() {
+                let err = String::from_utf8_lossy(&status.stderr).trim().to_string();
+                // "Stream map '0:N' matches no streams" => pista no existe, skip
+                if err.contains("matches no streams") || err.contains("does not contain any stream") {
+                    continue;
+                }
+                return Err(if err.is_empty() { "ffmpeg falló extrayendo audio".into() } else { err });
+            }
+            if !out.exists() || std::fs::metadata(&out).map(|m| m.len()).unwrap_or(0) < 512 {
+                continue;
+            }
+        }
+        results.push(AudioPreviewResult { track, wav_path: out.to_string_lossy().to_string() });
+    }
+    Ok(results)
+}
+
+#[tauri::command]
+fn cleanup_audio_preview() -> Result<(), String> {
+    let tmp_base = std::env::temp_dir().join("swissvideo_preview");
+    if tmp_base.exists() {
+        // Borrar wavs con más de 2h de antigüedad para no acumular
+        if let Ok(entries) = std::fs::read_dir(&tmp_base) {
+            let now = std::time::SystemTime::now();
+            for e in entries.flatten() {
+                if let Ok(meta) = e.metadata() {
+                    if let Ok(m) = meta.modified() {
+                        if let Ok(age) = now.duration_since(m) {
+                            if age.as_secs() > 7200 {
+                                let _ = std::fs::remove_file(e.path());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 // ==================== TESTS ====================
 
 #[cfg(test)]
@@ -1635,6 +1884,119 @@ mod tests {
     fn parse_ffmpeg_progress_returns_none_for_empty() {
         assert!(parse_ffmpeg_progress("").is_none());
     }
+
+    // ---- volumen por pista ----
+
+    #[test]
+    fn volume_to_gain_clamps_and_scales() {
+        assert!((volume_to_gain(100.0) - 1.0).abs() < 0.001);
+        assert!((volume_to_gain(150.0) - 1.5).abs() < 0.001);
+        assert!((volume_to_gain(50.0) - 0.5).abs() < 0.001);
+        assert!((volume_to_gain(0.0) - 0.0).abs() < 0.001);
+        assert!((volume_to_gain(200.0) - 2.0).abs() < 0.001);
+        // clamp
+        assert!((volume_to_gain(300.0) - 2.0).abs() < 0.001);
+        assert!((volume_to_gain(-10.0) - 0.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn format_gain_trims_zeros() {
+        assert_eq!(format_gain(1.5), "1.5");
+        assert_eq!(format_gain(0.5), "0.5");
+        assert_eq!(format_gain(2.0), "2");
+        assert_eq!(format_gain(1.0), "1");
+        assert_eq!(format_gain(0.0), "0");
+    }
+
+    #[test]
+    fn gain_for_track_returns_none_when_100() {
+        let mut m = HashMap::new();
+        m.insert(1u32, 100.0);
+        m.insert(2u32, 150.0);
+        assert!(gain_for_track(1, Some(&m)).is_none());
+        assert!(gain_for_track(2, Some(&m)).is_some());
+        assert!(gain_for_track(99, Some(&m)).is_none());
+        assert!(gain_for_track(1, None).is_none());
+    }
+
+    #[test]
+    fn build_amix_filter_complex_with_volumes() {
+        let mut vols = HashMap::new();
+        vols.insert(1u32, 150.0); // 1.5
+        vols.insert(2u32, 50.0);  // 0.5
+        let tracks = vec![1u32, 2u32];
+        let filter = build_amix_filter_complex(&tracks, Some(&vols));
+        assert_eq!(filter, "[0:1]volume=1.5[a0];[0:2]volume=0.5[a1];[a0][a1]amix=inputs=2:duration=longest:normalize=1[aout]");
+    }
+
+    #[test]
+    fn build_amix_filter_complex_with_one_volume_and_one_default() {
+        let mut vols = HashMap::new();
+        vols.insert(1u32, 150.0);
+        let tracks = vec![1u32, 2u32];
+        let filter = build_amix_filter_complex(&tracks, Some(&vols));
+        // pista 1 con volume, pista 2 con anull
+        assert_eq!(filter, "[0:1]volume=1.5[a0];[0:2]anull[a1];[a0][a1]amix=inputs=2:duration=longest:normalize=1[aout]");
+    }
+
+    #[test]
+    fn build_amix_filter_complex_without_volumes_uses_anull() {
+        let filter = build_amix_filter_complex(&[1, 2], None);
+        assert_eq!(filter, "[0:1]anull[a0];[0:2]anull[a1];[a0][a1]amix=inputs=2:duration=longest:normalize=1[aout]");
+    }
+
+    #[test]
+    fn build_separate_filter_complex_some_volumes() {
+        let mut vols = HashMap::new();
+        vols.insert(1u32, 200.0); // 2.0
+        vols.insert(2u32, 100.0); // should be anull
+        let tracks = vec![1u32, 2u32];
+        let filter = build_separate_filter_complex(&tracks, Some(&vols)).expect("should have filter");
+        assert_eq!(filter, "[0:1]volume=2[a0];[0:2]anull[a1]");
+    }
+
+    #[test]
+    fn build_separate_filter_complex_no_volumes_returns_none() {
+        assert!(build_separate_filter_complex(&[1, 2], None).is_none());
+        let mut vols = HashMap::new();
+        vols.insert(1u32, 100.0);
+        assert!(build_separate_filter_complex(&[1], Some(&vols)).is_none());
+    }
+
+    #[test]
+    fn deserialize_audio_volumes_map_form() {
+        let json = r#"{"input_path":"a.mp4","codec":"libx264","quality":23,"preset_idx":5,"resolution":"original","fps":"original","bitrate":4,"rate_control":"cq","audio_volumes":{"0":150,"1":50}}"#;
+        let p: EncodeParams = serde_json::from_str(json).expect("parse map form");
+        let vols = p.audio_volumes.expect("volumes present");
+        assert_eq!(vols.get(&0).copied().unwrap(), 150.0);
+        assert_eq!(vols.get(&1).copied().unwrap(), 50.0);
+    }
+
+    #[test]
+    fn deserialize_audio_volumes_array_form() {
+        let json = r#"{"input_path":"a.mp4","codec":"libx264","quality":23,"preset_idx":5,"resolution":"original","fps":"original","bitrate":4,"rate_control":"cq","audio_volumes":[100,150,50]}"#;
+        let p: EncodeParams = serde_json::from_str(json).expect("parse array form");
+        let vols = p.audio_volumes.expect("volumes present");
+        assert_eq!(vols.get(&1).copied().unwrap(), 150.0);
+        assert_eq!(vols.get(&2).copied().unwrap(), 50.0);
+    }
+
+    #[test]
+    fn deserialize_audio_volumes_missing_is_none() {
+        let json = r#"{"input_path":"a.mp4","codec":"libx264","quality":23,"preset_idx":5,"resolution":"original","fps":"original","bitrate":4,"rate_control":"cq"}"#;
+        let p: EncodeParams = serde_json::from_str(json).expect("parse without volumes");
+        assert!(p.audio_volumes.is_none());
+    }
+
+    #[test]
+    fn deserialize_queue_item_and_base_params() {
+        let qi_json = r#"{"input_path":"a.mp4","audio_volumes":{"2":200}}"#;
+        let qi: QueueItem = serde_json::from_str(qi_json).expect("queue item");
+        assert_eq!(qi.audio_volumes.as_ref().unwrap().get(&2).copied().unwrap(), 200.0);
+        let base_json = r#"{"codec":"libx264","quality":23,"preset_idx":5,"resolution":"original","fps":"original","bitrate":4,"rate_control":"cq","audio_volumes":{"1":75}}"#;
+        let bp: QueueBaseParams = serde_json::from_str(base_json).expect("base params");
+        assert_eq!(bp.audio_volumes.as_ref().unwrap().get(&1).copied().unwrap(), 75.0);
+    }
 }
 
 // ==================== RUN ====================
@@ -1687,6 +2049,8 @@ pub fn run() {
             get_history,
             save_codec_usage,
             verificar_nombre_salida,
+            extract_audio_preview,
+            cleanup_audio_preview,
         ])
         .run(tauri::generate_context!())
         .expect("error al ejecutar SwissVideo V2");

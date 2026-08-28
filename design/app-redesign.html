@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwissVideo V2 — 3 Direcciones Profesionales</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--Mono:ui-monospace,"Cascadia Mono",Consolas,monospace}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#0f0f12;color:#e8e8ec}
+  .Top{position:sticky;top:0;z-index:20;background:#0f0f12E6;backdrop-filter:blur(12px);border-bottom:1px solid #26262f;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .Top h1{font-size:15px;font-weight:800;letter-spacing:-0.02em}
+  .Top p{font-size:12px;color:#8a8a94;max-width:560px;line-height:1.4}
+  .Switcher{display:flex;gap:6px;background:#1a1a20;border:1px solid #26262f;border-radius:999px;padding:4px}
+  .SwBtn{border:none;background:transparent;color:#8a8a94;font-size:12px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer;transition:all .18s}
+  .SwBtn.on{background:#fff;color:#0f0f12}
+  .SwBtn:focus-visible{outline:2px solid #E85D4E;outline-offset:2px}
+  .Stage{padding:18px;max-width:1400px;margin:0 auto}
+  .Variant{display:none}
+  .Variant.on{display:block}
+  .Note{font-size:12px;color:#8a8a94;line-height:1.6;max-width:760px;margin:8px 0 14px}
+  .Note strong{color:#b0b0b8}
+
+  /* Shared app shell mock */
+  .AppMock{border:1px solid var(--app-border);border-radius:var(--app-radius);overflow:hidden;background:var(--app-bg);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+  .AppHd{height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--app-border);background:var(--app-hd)}
+  .AppHd .Brand{font-weight:800;letter-spacing:-0.02em;font-size:13px;display:flex;align-items:center;gap:8px}
+  .Brand i{width:9px;height:9px;border-radius:50%;background:var(--accent);display:inline-block;box-shadow:0 0 0 6px var(--accent-dim)}
+  .HdActions{display:flex;gap:8px}
+  .HdBtn{font-size:11px;font-weight:600;padding:6px 10px;border-radius:999px;border:1px solid var(--app-border);background:var(--panel2);color:var(--text2)}
+  .MainGrid{display:grid;grid-template-columns: 340px 1fr 360px;gap:var(--gap);padding:var(--gap);background:var(--app-bg)}
+  .Col{display:flex;flex-direction:column;gap:var(--gap)}
+  .Card{background:var(--panel);border:1px solid var(--app-border);border-radius:var(--card-radius);padding:12px}
+  .CardHd{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .CardHd span{opacity:.9}
+  .Drop{border:1px dashed var(--app-border);border-radius:var(--card-radius);padding:18px;text-align:center;color:var(--text2);font-size:12px}
+  .QueueItem{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;border-left:3px solid transparent;background:transparent}
+  .QueueItem.on{border-left-color:var(--accent);background:var(--panel2)}
+  .TrackRow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--app-border);font-size:12px}
+  .TrackRow:first-child{border-top:none}
+  .Slider{flex:1;height:3px;background:var(--app-border);border-radius:3px;position:relative}
+  .Slider::after{content:"";position:absolute;left:30%;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--panel)}
+  .Badge{font-family:var(--Mono);font-size:10px;padding:2px 6px;border-radius:999px;border:1px solid var(--app-border);background:var(--panel2);color:var(--text2)}
+  .Preview{aspect-ratio:16/9;background:#000;border-radius:var(--card-radius);display:flex;align-items:center;justify-content:center;color:#555;font-size:11px;position:relative;overflow:hidden}
+  .Preview::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 60%, rgba(0,0,0,.35))}
+  .Bar{height:4px;background:var(--panel2);border-radius:999px;overflow:hidden}
+  .Fill{height:100%;width:38%;background:var(--accent)}
+  .BtnPrimary{width:100%;padding:11px;border-radius:10px;border:1px solid var(--accent);background:var(--accent-dim);color:var(--accent);font-weight:800;font-size:12px}
+  .BtnGhost{padding:7px 10px;border-radius:999px;border:1px solid var(--app-border);background:transparent;color:var(--text2);font-size:11px;font-weight:600}
+  .Meta{font-size:11px;color:var(--text3);display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--app-border)}
+  .Meta:last-child{border-bottom:none}
+
+  /* Variant A — Obsidian Forge (Swiss/Technical) */
+  .variant-a{
+    --app-bg:#0A0A0B; --app-hd:#0f0f12; --app-border:#232326; --app-radius:14px; --card-radius:8px;
+    --panel:#141416; --panel2:#1a1a1e; --accent:#E85D4E; --accent-dim:rgba(232,93,78,.14);
+    --text:#f2f2f3; --text2:#a1a1aa; --text3:#71717a; --gap:12px;
+  }
+  .variant-a .AppMock{font-family:"Inter",system-ui,sans-serif}
+  .variant-a .Brand{font-family:var(--Mono);letter-spacing:.06em;text-transform:uppercase;font-size:12px}
+  .variant-a .CardHd{font-family:var(--Mono);letter-spacing:.12em}
+  .variant-a .BtnPrimary{letter-spacing:.04em;text-transform:uppercase}
+  .variant-a .Preview{border:1px solid #232326}
+
+  /* Variant B — Alpine (Light / Pro Tool) */
+  .variant-b{
+    --app-bg:#F1F5F9; --app-hd:#ffffff; --app-border:#E2E8F0; --app-radius:16px; --card-radius:12px;
+    --panel:#ffffff; --panel2:#F8FAFC; --accent:#2563EB; --accent-dim:rgba(37,99,235,.10);
+    --text:#0F172A; --text2:#475569; --text3:#94A3B8; --gap:14px;
+  }
+  .variant-b{color:#0F172A}
+  .variant-b .AppMock{box-shadow:0 12px 40px rgba(15,23,42,.08);border-color:#E2E8F0}
+  .variant-b .AppHd{background:#fff}
+  .variant-b .Card{box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  .variant-b .Drop{background:#F8FAFC;border-color:#CBD5E1}
+  .variant-b .Badge{background:#EFF6FF;border-color:#BFDBFE;color:#2563EB}
+
+  /* Variant C — Signal Tape (Warm / Editorial) */
+  .variant-c{
+    --app-bg:#111110; --app-hd:#1a1a18; --app-border:#2a2a28; --app-radius:12px; --card-radius:10px;
+    --panel:#1e1e1c; --panel2:#252522; --accent:#FF3B30; --accent-dim:rgba(255,59,48,.14);
+    --text:#f5f5f0; --text2:#a8a8a0; --text3:#7a7a74; --gap:12px;
+  }
+  .variant-c .AppMock{font-family:"IBM Plex Sans",system-ui,sans-serif}
+  .variant-c .Brand{font-family:"Instrument Serif",serif;font-size:16px;letter-spacing:-0.02em;text-transform:none}
+  .variant-c .CardHd{font-family:"IBM Plex Mono",monospace;text-transform:none;letter-spacing:0;font-size:11px}
+  .variant-c .Preview{background:#000 url('data:image repeating-linear-gradient(0deg, transparent 0 2px, rgba(255,255,255,.03) 2px 3px)');}
+  .variant-c .BtnPrimary{background:#FF3B30;color:#fff;border-color:#FF3B30}
+  .variant-c .Slider::after{background:#FF3B30}
+  .variant-c .Fill{background:repeating-linear-gradient(90deg, #FF3B30 0 8px, #FFE600 8px 12px)}
+
+  .Tokens{margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:11px}
+  .Tok{background:var(--panel);border:1px solid var(--app-border);border-radius:10px;padding:10px}
+  .Tok b{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+  .Dots{display:flex;gap:6px;flex-wrap:wrap}
+  .Dot{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.12)}
+  .Type{font-family:var(--Mono);font-size:11px;color:var(--text2);line-height:1.6}
+
+  @media (max-width: 1100px){ .MainGrid{grid-template-columns:1fr 1fr} .MainGrid .Col:last-child{grid-column:span 2} }
+  @media (max-width: 700px){ .MainGrid{grid-template-columns:1fr} .MainGrid .Col:last-child{grid-column:span 1} }
+</style>
+</head>
+<body>
+<div class="Top">
+  <div>
+    <h1>SwissVideo V2 — 3 direcciones profesionales</h1>
+    <p>Mismo contenido, 3 identidades. Cada variante cambia tokens, tipografía y firma. Elegí una y la porto a <code>src/styles.css</code> sin reescribir lógica.</p>
+  </div>
+  <div class="Switcher" role="tablist" aria-label="Variantes">
+    <button class="SwBtn on" data-v="a" role="tab" aria-selected="true">A · Obsidian Forge</button>
+    <button class="SwBtn" data-v="b" role="tab">B · Alpine</button>
+    <button class="SwBtn" data-v="c" role="tab">C · Signal Tape</button>
+  </div>
+</div>
+
+<div class="Stage">
+  <!-- VARIANT A -->
+  <div class="Variant on variant-a" id="variant-a">
+    <p class="Note"><strong>Obsidian Forge — Suiza técnica.</strong> Inspirado en consolas de corrección de color y en el diseño suizo: grilla rígida, mono para datos, 4px de radio, acento vermellón único. Firma: barra de progreso con ticks técnicos y “Mono + Mayús” en headers. Riesgo: frialdad extrema — se calienta solo con el acento y el punto rojo de la marca.</p>
+    <div class="AppMock">
+      <div class="AppHd"><div class="Brand"><i></i> SWISSVIDEO V2</div><div class="HdActions"><span class="Badge">GPU · NVENC</span><button class="BtnGhost">Gestionar presets</button></div></div>
+      <div class="MainGrid">
+        <div class="Col">
+          <div class="Card"><div class="CardHd"><span>Cola</span><span style="text-transform:none;letter-spacing:0;font-family:var(--Mono)">2 archivos</span></div><div class="QueueItem on"><span>⚡</span> clip_04.mp4 <span class="Badge">H.265 · CPU @100%</span></div><div class="QueueItem">entrevista.mkv <span class="Badge">H.264</span></div></div>
+          <div class="Card"><div class="CardHd"><span>Historial</span><span>Ahorro 1.2 GB</span></div><div class="Meta"><span>clip_04 → clip_04_h265</span><span style="color:var(--accent)">−62%</span></div></div>
+        </div>
+        <div class="Col">
+          <div class="Card"><div class="CardHd"><span>Codec</span></div><div style="display:flex;gap:6px"><span class="Badge" style="border-color:var(--accent);color:var(--accent);background:var(--accent-dim)">H.264</span><span class="Badge" style="background:var(--accent-dim);color:var(--accent);border-color:var(--accent)">H.265 · CPU</span><span class="Badge">AV1</span></div></div>
+          <div class="Card"><div class="CardHd"><span>Pistas de audio</span><span class="Badge">2 pistas · mezcla</span></div><div class="TrackRow"><span>▣</span> Español (aac · 2ch) <div class="Slider"></div><span class="Badge">100%</span></div><div class="TrackRow"><span>▣</span> English <div class="Slider"></div><span class="Badge" style="color:var(--accent);border-color:var(--accent)">150%</span></div></div>
+          <div class="Card"><div class="CardHd"><span>Corte</span></div><div class="Meta"><span>00:00:00 → 00:02:14</span><span>Personalizado</span></div></div>
+        </div>
+        <div class="Col">
+          <div class="Preview">PREVIEW · 16:9</div>
+          <div class="Card"><div class="Bar"><div class="Fill"></div></div><div style="display:flex;justify-content:space-between;font-family:var(--Mono);font-size:10px;color:var(--text3);margin-top:6px"><span>38% · 1.2x</span><span>ETA 02:14</span></div><button class="BtnPrimary" style="margin-top:10px">COMPRIMIR VIDEO</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="Tokens">
+      <div class="Tok"><b>Paleta</b><div class="Dots"><span class="Dot" style="background:#0A0A0B"></span><span class="Dot" style="background:#141416"></span><span class="Dot" style="background:#232326"></span><span class="Dot" style="background:#E85D4E"></span><span class="Dot" style="background:#a1a1aa"></span></div><div class="Type" style="margin-top:8px">#0A0A0B · #141416 · #232326 · #E85D4E · #A1A1AA</div></div>
+      <div class="Tok"><b>Tipografía</b><div class="Type">Display: <b>Geist Mono / IBM Plex Mono</b> (headers mayús)<br>Body: Inter 12/13<br>Data: JetBrains Mono 10-11</div></div>
+      <div class="Tok"><b>Firma</b><div class="Type">Ticks en progreso + punto rojo + headers mono mayús. Todo a 4-8px, nada redondeado de más.</div></div>
+    </div>
+  </div>
+
+  <!-- VARIANT B -->
+  <div class="Variant variant-b" id="variant-b">
+    <p class="Note"><strong>Alpine — Herramienta clara.</strong> Referencia: Finder / Linear / DaVinci en modo claro. Fondo frío, tarjetas blancas con sombra sutil, acento azul eléctrico. Firma: tarjetas “flotadas” y badges suaves. Riesgo: parecer “SaaS genérico” — se salva por la densidad y el azul muy saturado usado con restricción.</p>
+    <div class="AppMock">
+      <div class="AppHd"><div class="Brand"><i style="background:#2563EB;box-shadow:0 0 0 6px rgba(37,99,235,.12)"></i> SwissVideo</div><div class="HdActions"><span class="Badge">Intel QuickSync</span><button class="BtnGhost">Gestionar</button></div></div>
+      <div class="MainGrid">
+        <div class="Col">
+          <div class="Card"><div class="CardHd"><span>Cola de procesamiento</span><span>Modo lote</span></div><div class="Drop">Arrastrá videos o <u>Seleccionar</u></div><div class="QueueItem on">clip_04.mp4 — <em>H.265</em></div></div>
+          <div class="Card"><div class="CardHd"><span>Historial</span></div><div class="Meta"><span>Ahorro total</span><span style="color:#2563EB;font-weight:800">1.2 GB</span></div></div>
+        </div>
+        <div class="Col">
+          <div class="Card"><div class="CardHd"><span>Codec de video</span></div><div style="display:flex;gap:8px"><span class="Badge">H.264</span><span class="Badge" style="background:#2563EB;color:#fff;border-color:#2563EB">H.265</span><span class="Badge">AV1 · GPU</span></div></div>
+          <div class="Card"><div class="CardHd"><span>Pistas de audio</span></div><div class="TrackRow"><span style="width:14px;height:14px;border:1px solid #CBD5E1;border-radius:4px;display:inline-block"></span> Español — aac <div class="Slider"></div><span class="Badge">100%</span></div><div class="TrackRow"><span style="width:14px;height:14px;background:#2563EB;border-radius:4px;display:inline-block"></span> English <div class="Slider"></div><span class="Badge">150%</span></div></div>
+        </div>
+        <div class="Col">
+          <div class="Preview" style="background:#0F172A;color:#94A3B8">Preview claro</div>
+          <div class="Card"><div class="Bar" style="background:#E2E8F0"><div class="Fill" style="background:#2563EB;width:42%"></div></div><button class="BtnPrimary" style="background:#2563EB;border-color:#2563EB;color:#fff;margin-top:10px">Comprimir video</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="Tokens">
+      <div class="Tok"><b>Paleta</b><div class="Dots"><span class="Dot" style="background:#F1F5F9"></span><span class="Dot" style="background:#ffffff;border:1px solid #E2E8F0"></span><span class="Dot" style="background:#0F172A"></span><span class="Dot" style="background:#2563EB"></span></div><div class="Type">#F1F5F9 · #FFFFFF · #0F172A · #2563EB</div></div>
+      <div class="Tok"><b>Tipografía</b><div class="Type">Display: Inter Tight 600<br>Body: Inter<br>Mono: Geist Mono para datos</div></div>
+      <div class="Tok"><b>Firma</b><div class="Type">Elevación sutil + badges pastel. Sensación de app nativa, no web.</div></div>
+    </div>
+  </div>
+
+  <!-- VARIANT C -->
+  <div class="Variant variant-c" id="variant-c">
+    <p class="Note"><strong>Signal Tape — Editorial cálido.</strong> Referencia: consolas analógicas, cintas, editorial. Vermellón + amarillo señal, serif para marca, mono para controles. Firma: progreso a rayas (cinta) y scanlines en preview. Riesgo: “retro” — se contiene usando solo dos colores señal y mucho negro cálido.</p>
+    <div class="AppMock">
+      <div class="AppHd"><div class="Brand">SwissVideo — <span style="font-weight:400;opacity:.7">Tape Deck</span></div><div class="HdActions"><span class="Badge" style="background:#FFE600;color:#111;border-color:#FFE600">REC · H.265</span><button class="BtnGhost">Presets</button></div></div>
+      <div class="MainGrid">
+        <div class="Col">
+          <div class="Card"><div class="CardHd"><span>Cola — Deck A</span><span>02 cintas</span></div><div class="QueueItem on" style="background:#252522;border-left-color:#FF3B30">▐ clip_04.mp4</div><div class="QueueItem">▐ entrevista.mkv</div></div>
+          <div class="Card"><div class="CardHd"><span>Historial</span></div><div class="Meta"><span>Guardado</span><span style="color:#FFE600">1.2 GB</span></div></div>
+        </div>
+        <div class="Col">
+          <div class="Card"><div class="CardHd"><span>Codec — Cabeza</span></div><div style="display:flex;gap:6px"><span class="Badge">H.264</span><span class="Badge" style="background:#FF3B30;color:#fff;border-color:#FF3B30">H.265</span><span class="Badge">AV1</span></div></div>
+          <div class="Card"><div class="CardHd"><span>Audio — Mesa</span></div><div class="TrackRow"><span>—</span> Español <div class="Slider"></div><span class="Badge">100%</span></div><div class="TrackRow"><span>—</span> English <div class="Slider"></div><span class="Badge" style="background:#FF3B30;color:#fff">150%</span></div></div>
+        </div>
+        <div class="Col">
+          <div class="Preview">● REC 00:02:14</div>
+          <div class="Card"><div class="Bar"><div class="Fill"></div></div><button class="BtnPrimary" style="margin-top:10px">▶ COMPRIMIR</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="Tokens">
+      <div class="Tok"><b>Paleta</b><div class="Dots"><span class="Dot" style="background:#111110"></span><span class="Dot" style="background:#1e1e1c"></span><span class="Dot" style="background:#FF3B30"></span><span class="Dot" style="background:#FFE600"></span></div><div class="Type">#111110 · #1E1E1C · #FF3B30 · #FFE600</div></div>
+      <div class="Tok"><b>Tipografía</b><div class="Type">Marca: Instrument Serif<br>Controles: IBM Plex Mono<br>Body: IBM Plex Sans</div></div>
+      <div class="Tok"><b>Firma</b><div class="Type">Rayas de cinta + scanlines + “REC”. Calidez analógica sin caer en kitsch.</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btns=[...document.querySelectorAll('.SwBtn')];
+  const variants={a:document.getElementById('variant-a'),b:document.getElementById('variant-b'),c:document.getElementById('variant-c')};
+  btns.forEach(b=>b.addEventListener('click',()=>{
+    btns.forEach(x=>{x.classList.remove('on');x.setAttribute('aria-selected','false')});
+    b.classList.add('on');b.setAttribute('aria-selected','true');
+    Object.entries(variants).forEach(([k,el])=>el.classList.toggle('on',k===b.dataset.v));
+    window.scrollTo({top:0,behavior:'smooth'});
+  }));
+</script>
+</body>
+</html>

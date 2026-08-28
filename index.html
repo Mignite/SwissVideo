@@ -86,34 +86,33 @@
         <input type="range" id="presetSlider" min="0" max="8" value="4">
         <span class="Pval" id="presetVal">fast</span>
       </div>
-      <div class="Prow">
-        <span class="Plbl">Resolución</span>
-        <select id="resolutionSelect">
-          <option value="original">Original</option>
-          <option value="3840x2160">4K (3840x2160)</option>
-          <option value="2560x1440">2K (2560x1440)</option>
-          <option value="1920x1080">1080p</option>
-          <option value="1280x720">720p</option>
-          <option value="854x480">480p</option>
-        </select>
-      </div>
-      <div class="Prow">
-        <span class="Plbl">FPS</span>
-        <select id="fpsSelect">
-          <option value="original">Original</option>
-          <option value="60">60 fps</option>
-          <option value="30">30 fps</option>
-          <option value="24">24 fps</option>
-        </select>
+      <div class="Prow Prow--split">
+        <div class="Pfield">
+          <span class="Plbl">Resolución</span>
+          <select id="resolutionSelect">
+            <option value="original">Original</option>
+            <option value="3840x2160">4K</option>
+            <option value="2560x1440">2K</option>
+            <option value="1920x1080">1080p</option>
+            <option value="1280x720">720p</option>
+            <option value="854x480">480p</option>
+          </select>
+        </div>
+        <div class="Pfield">
+          <span class="Plbl">FPS</span>
+          <select id="fpsSelect">
+            <option value="original">Original</option>
+            <option value="60">60 fps</option>
+            <option value="30">30 fps</option>
+            <option value="24">24 fps</option>
+          </select>
+        </div>
       </div>
     </div>
 
     <div class="Card">
-      <div class="CardHd">Pistas de audio</div>
+      <div class="CardHd">Pistas de audio <span id="audioPreviewStatus" class="AudioPreviewBadge" style="display:none"></span></div>
       <div id="audioTracksContainer"></div>
-      <label class="CheckRow">
-        <input type="checkbox" id="customMixCheck"> Normalizar volumen al mezclar
-      </label>
     </div>
 
     <div class="Card">
@@ -152,16 +151,6 @@
       <div class="NamePreview">Preview: <span id="namePreview">...</span></div>
     </div>
 
-    <div class="Card">
-      <div class="CardHd">Destino</div>
-      <div class="DirRow">
-        <input type="text" id="destPath" class="DirInp" placeholder="Carpeta destino">
-        <button id="browseDestBtn">Examinar</button>
-      </div>
-      <label class="CheckRow">
-        <input type="checkbox" id="sameFolderCheck"> Misma carpeta que el origen
-      </label>
-    </div>
   </div>
 
   <!-- COLUMNA DERECHA -->
@@ -219,6 +208,17 @@
         </button>
       </div>
       <button class="PlayerConfirmBtn" id="playerConfirmBtn">Confirmar corte</button>
+    </div>
+
+    <div class="Card">
+      <div class="CardHd">Destino</div>
+      <div class="DirRow">
+        <input type="text" id="destPath" class="DirInp" placeholder="Carpeta destino">
+        <button id="browseDestBtn">Examinar</button>
+      </div>
+      <label class="CheckRow">
+        <input type="checkbox" id="sameFolderCheck"> Misma carpeta que el origen
+      </label>
     </div>
 
     <div class="EncodeContainer">

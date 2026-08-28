@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwissVideo — Todo Cuadradito (Brutalista Suizo)</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#111110; --panel:#1e1e1c; --panel2:#252522; --border:#2a2a28; --border2:#3a3a36;
+    --text:#f5f5f0; --text2:#a8a8a0; --text3:#7a7a74; --text4:#6e6e68;
+    --accent:#FF3B30; --accent-dim:rgba(255,59,48,.14); --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+    --r:0px; --r-sm:0px; --gap:10px;
+  }
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);padding:18px}
+  .Wrap{max-width:1360px;margin:0 auto}
+  .Head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .Head h1{font-size:15px;font-weight:800;letter-spacing:.02em}
+  .Head p{font-size:12px;color:var(--text3);max-width:620px;line-height:1.5}
+  .Tag{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);border:1px solid var(--border2);padding:3px 7px;background:var(--panel)}
+  .Grid{display:grid;grid-template-columns:320px 1fr 360px;gap:var(--gap)}
+  .Col{display:flex;flex-direction:column;gap:var(--gap)}
+  .Card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:12px}
+  .CardHd{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .Drop{border:1px solid var(--border2);border-radius:var(--r);padding:18px;text-align:center;background:var(--panel2);color:var(--text2);font-size:12px}
+  .Btn{border-radius:var(--r);border:1px solid var(--border2);background:var(--panel2);color:var(--text);font-size:11px;font-weight:700;padding:7px 10px;cursor:pointer}
+  .BtnPrimary{width:100%;border-radius:var(--r);border:1px solid var(--accent);background:var(--accent);color:#fff;font-weight:800;padding:10px;font-size:12px;letter-spacing:.02em}
+  .QueueItem{display:flex;align-items:center;gap:8px;padding:8px 10px;border-left:3px solid transparent;background:transparent}
+  .QueueItem.on{border-left-color:var(--accent);background:var(--panel2)}
+  .TrackRow{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--border);font-size:12px}
+  .TrackRow:first-child{border-top:none}
+  .Check{width:18px;height:18px;border-radius:0;border:1.6px solid var(--border2);background:var(--panel2);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .Check.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .Check svg{width:11px;height:11px}
+  .Slider{flex:1;height:4px;background:var(--border2);border-radius:0;position:relative}
+  .Slider::after{content:"";position:absolute;left:42%;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;background:var(--accent);border:1px solid var(--panel);border-radius:0}
+  .Badge{font-family:var(--mono);font-size:10px;padding:2px 6px;border:1px solid var(--border2);background:var(--panel2);border-radius:0}
+  .Preview{aspect-ratio:16/9;background:#000;border:1px solid var(--border2);border-radius:var(--r);display:flex;align-items:center;justify-content:center;color:var(--text3);font-family:var(--mono);font-size:11px}
+  .Bar{height:6px;background:var(--panel2);border:1px solid var(--border2);border-radius:0}
+  .Fill{height:100%;width:38%;background:var(--accent)}
+  .Row{display:flex;gap:8px;align-items:center}
+  .Seg{display:flex;gap:0;border:1px solid var(--border2);border-radius:0;overflow:hidden}
+  .Seg button{flex:1;border:none;border-right:1px solid var(--border2);background:var(--panel2);color:var(--text2);padding:7px 6px;font-family:var(--mono);font-size:11px;font-weight:700}
+  .Seg button:last-child{border-right:none}
+  .Seg button.on{background:var(--accent);color:#fff}
+  .Meta{font-size:11px;color:var(--text3);display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)}
+  .Compare{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+  .Mini{border:1px solid var(--border);background:var(--panel);padding:10px;border-radius:var(--r)}
+  .Mini h3{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+  .PillDemo{display:flex;gap:8px;flex-wrap:wrap}
+  .Pill{padding:5px 10px;border:1px solid var(--border2);background:var(--panel2);font-size:11px}
+  .Pill.round{border-radius:999px}
+  .Pill.sq{border-radius:0}
+  @media (max-width:1100px){.Grid{grid-template-columns:1fr 1fr}.Grid .Col:last-child{grid-column:span 2}}
+  @media (max-width:700px){.Grid{grid-template-columns:1fr}.Grid .Col:last-child{grid-column:span 1}}
+</style>
+</head>
+<body>
+<div class="Wrap">
+  <div class="Head">
+    <div>
+      <h1>SwissVideo — Todo Cuadradito <span class="Tag">r: 0px · Suizo brutalista</span></h1>
+      <p>Tu malinterpretación era “pill vs cuadrado” (redondeado vs cuadrado) y quedó bien como checkbox cuadrado. Ahora esto es lo otro: <b>todo a 0px</b> — sin redondeos en tarjetas, botones, sliders y progreso. Más suizo, más herramienta.</p>
+    </div>
+    <span class="Tag">Negro cálido Signal Tape · #111110</span>
+  </div>
+
+  <div class="Grid">
+    <div class="Col">
+      <div class="Card">
+        <div class="CardHd"><span>Cola</span><span>02</span></div>
+        <div class="QueueItem on">▐ clip_04.mp4 <span class="Badge">H.265 · CPU</span></div>
+        <div class="QueueItem">▐ entrevista.mkv</div>
+        <div class="Drop" style="margin-top:8px">Arrastrá videos<br><span style="font-size:10px;font-family:var(--mono)">MP4 · MKV · MOV</span></div>
+      </div>
+      <div class="Card">
+        <div class="CardHd"><span>Historial</span></div>
+        <div class="Meta"><span>clip_04 → h265</span><span style="color:var(--accent)">−62%</span></div>
+        <div class="Meta"><span>Ahorro total</span><span style="color:#FFE600">1.2 GB</span></div>
+      </div>
+    </div>
+
+    <div class="Col">
+      <div class="Card">
+        <div class="CardHd"><span>Codec</span></div>
+        <div class="Seg"><button>H.264</button><button class="on">H.265</button><button>AV1</button></div>
+      </div>
+      <div class="Card">
+        <div class="CardHd"><span>Pistas de audio</span><span class="Badge">2 pistas</span></div>
+        <div class="TrackRow"><span class="Check on"><svg viewBox="0 0 12 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5 L4.5 8.5 L11 1.5"/></svg></span> Español (aac · 2ch) <div class="Slider"></div><span class="Badge">100%</span></div>
+        <div class="TrackRow"><span class="Check on"><svg viewBox="0 0 12 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5 L4.5 8.5 L11 1.5"/></svg></span> English <div class="Slider"></div><span class="Badge" style="color:var(--accent);border-color:var(--accent)">150%</span></div>
+      </div>
+      <div class="Card">
+        <div class="CardHd"><span>Calidad</span></div>
+        <div class="Row"><span style="font-family:var(--mono);font-size:11px;color:var(--text2)">CRF 23</span><div class="Slider" style="flex:1"></div><span class="Badge">fast</span></div>
+      </div>
+    </div>
+
+    <div class="Col">
+      <div class="Preview">PREVIEW · 16:9 — 0px</div>
+      <div class="Card">
+        <div class="CardHd"><span>Destino</span></div>
+        <div class="Row"><div style="flex:1;border:1px solid var(--border2);background:var(--panel2);padding:7px 8px;font-family:var(--mono);font-size:11px">C:\Videos\SwissVideo</div><button class="Btn">Examinar</button></div>
+        <div class="Bar" style="margin-top:10px"><div class="Fill"></div></div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:6px"><span>38% · 1.2x</span><span>ETA 02:14</span></div>
+        <button class="BtnPrimary" style="margin-top:10px">▶ COMPRIMIR VIDEO</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="Compare">
+    <div class="Mini">
+      <h3>Ahora (cuadrado) — r: 0</h3>
+      <div class="PillDemo"><span class="Pill sq">H.265</span><span class="Pill sq" style="background:var(--accent);color:#fff;border-color:var(--accent)">H.265 · CPU</span><span class="Pill sq">Badge</span></div>
+      <p style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5">Bordes a 90°, slider thumb cuadrado 14×14, progreso de 6px con bloque sólido. Más “herramienta suiza”.</p>
+    </div>
+    <div class="Mini">
+      <h3>Antes (pill) — r: 8-999px</h3>
+      <div class="PillDemo"><span class="Pill round">H.265</span><span class="Pill round" style="background:var(--accent);color:#fff;border-color:var(--accent)">H.265 · CPU</span><span class="Pill round">Badge</span></div>
+      <p style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5">Todo redondeado, más amable/SaaS. El cuadrado es más pro y combina con tu tick cuadrado perfecto.</p>
+    </div>
+  </div>
+  <p style="font-size:11px;color:var(--text3);margin-top:10px;font-family:var(--mono)">Para aplicarlo real: cambio <code>--Radius/--RadiusSm/--RadiusLg</code> a <code>0</code> en <code>src/styles.css:27-29</code> y thumb del slider a 0. ¿Lo porto?</p>
+</div>
+</body>
+</html>

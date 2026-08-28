@@ -1,32 +1,33 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --Accent: #E85D4E;
+  /* Signal Tape — negro cálido */
+  --Accent: #FF3B30;
   --AccentBlue: #4EA8E8;
   --AccentGreen: #7ED957;
-  --AccentYellow: #E8C34E;
+  --AccentYellow: #FFE600;
   --AccentPurple: #B980E8;
   --AccentTeal: #4EE8C3;
-  --AccentDim: rgba(232, 93, 78, 0.12);
+  --AccentDim: rgba(255, 59, 48, 0.14);
 
-  --Panel: #1a1a20;
-  --Panel2: #1f1f26;
-  --Border: #26262f;
-  --BorderStrong: #33333d;
+  --Panel: #1e1e1c;
+  --Panel2: #252522;
+  --Border: #2a2a28;
+  --BorderStrong: #3a3a36;
 
-  --Text: #e8e8ec;
-  --Text2: #b0b0b8;
-  --Text3: #8a8a94;
+  --Text: #f5f5f0;
+  --Text2: #a8a8a0;
+  --Text3: #7a7a74;
   --Text4: #6a6a74;
   --Text5: #55555f;
 
   --Success: #7ED957;
-  --Danger: #E85D4E;
-  --Warn: #E8C34E;
+  --Danger: #FF3B30;
+  --Warn: #FFE600;
 
-  --Radius: 8px;
-  --RadiusSm: 6px;
-  --RadiusLg: 12px;
+  --Radius: 0px;
+  --RadiusSm: 0px;
+  --RadiusLg: 0px;
   --Space-1: 4px;
   --Space-2: 8px;
   --Space-3: 12px;
@@ -41,7 +42,7 @@ body {
   font-size: 15px;
   line-height: 1.5;
   color: var(--Text);
-  background: #15151a;
+  background: #111110;
   height: 100vh;
   overflow: hidden;
 }
@@ -83,6 +84,8 @@ body {
   overflow-y: auto;
   padding-right: 2px;
 }
+.Col:has(.OthersWrap.open) { overflow: visible; }
+.CodecRow { overflow: visible; }
 
 /* ===== TARJETAS ===== */
 .Card {
@@ -230,14 +233,14 @@ body {
   padding: 6px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5); display: none;
 }
 .OthersWrap.open .OthersMenu { display: block; }
-.OthersSearchWrap { position: sticky; top: -6px; background: #20202a; padding: 2px 0 6px; z-index: 1; }
+.OthersSearchWrap { position: sticky; top: 0; background: #20202a; margin: -6px -6px 0; padding: 6px; z-index: 1; }
 .OthersSearch {
   width: 100%; background: var(--Panel2); border: 1px solid var(--BorderStrong); border-radius: 6px;
   padding: 6px 8px; font-size: 12px; color: var(--Text); font-family: var(--Mono);
 }
 .OthersSearch::placeholder { color: var(--Text4); }
 .OthersSearch:focus { outline: none; border-color: var(--Accent); }
-.OthersList { display: contents; }
+.OthersList { display: block; }
 .OthersEmpty { font-size: 12px; color: var(--Text4); text-align: center; padding: 10px 8px; display: none; }
 .OthersItem {
   width: 100%; display: flex; align-items: center; gap: 8px;
@@ -268,6 +271,10 @@ body {
 .Prow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .Prow:last-child { margin-bottom: 0; }
 .Plbl { font-size: 12px; color: var(--Text3); min-width: 78px; flex-shrink: 0; }
+.Prow--split { gap: 12px; }
+.Prow--split .Pfield { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.Prow--split .Pfield .Plbl { min-width: auto; }
+.Prow--split .Pfield select { flex: 1; min-width: 0; }
 .Pval { font-family: monospace; font-size: 12px; color: var(--Text2); min-width: 40px; text-align: right; flex-shrink: 0; }
 input[type=range] {
   -webkit-appearance: none; flex: 1; height: 3px;
@@ -287,7 +294,35 @@ select, .Sel {
 select:hover, select:focus { border-color: var(--Accent); outline: none; }
 
 /* ===== AUDIO ===== */
-.TrackRow { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--Text2); padding: 4px 0; }
+.TrackRow { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--Text2); padding: 6px 0; flex-wrap: wrap; }
+.TrackRow span { flex: 1; min-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Elegant tick — reemplaza el checkbox nativo que esquivó el CSS */
+.AudioCheckWrap{position:relative;display:inline-flex;flex:0 0 auto;cursor:pointer}
+.AudioCheckWrap input{position:absolute;opacity:0;width:0;height:0}
+.AudioCheck{width:18px;height:18px;border-radius:0;border:1.5px solid var(--BorderStrong);background:var(--Panel2);display:inline-flex;align-items:center;justify-content:center;color:transparent;transition:background .18s,border-color .18s,box-shadow .18s,color .18s,transform .12s}
+.AudioCheck svg{width:11px;height:11px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.7);transition:opacity .14s,transform .14s}
+.AudioCheckWrap input:checked + .AudioCheck{background:var(--Accent);border-color:var(--Accent);color:#fff;box-shadow:0 0 0 3px var(--AccentDim)}
+.AudioCheckWrap input:checked + .AudioCheck svg{opacity:1;transform:scale(1)}
+.AudioCheckWrap input:focus-visible + .AudioCheck{outline:2px solid var(--Accent);outline-offset:2px}
+.AudioCheckWrap input:disabled + .AudioCheck{opacity:.38;cursor:not-allowed}
+.TrackRow:has(.AudioCheckWrap input:disabled){opacity:.6}
+.VolumeSlider { flex: 0 0 96px; min-width: 72px; max-width: 120px; accent-color: var(--Accent); }
+.VolumeSlider:disabled { opacity: 0.35; cursor: not-allowed; }
+.VolumeBadge { min-width: 38px; text-align: right; font-family: var(--Mono); font-size: 11px; color: var(--Text2); flex: 0 0 auto; }
+.VolumeBadge.muted { color: var(--Text4); }
+.VolumeBadge.boosted { color: var(--Accent); font-weight: 600; }
+.VolumeMuteBtn { flex: 0 0 auto; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: var(--RadiusSm); border: 1px solid var(--BorderStrong); background: var(--Panel2); color: var(--Text3); cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
+.VolumeMuteBtn:hover { border-color: var(--Accent); color: var(--Text); }
+.VolumeMuteBtn.on { border-color: var(--Accent); color: var(--Accent); background: var(--AccentDim); }
+.AudioPreviewBadge { display:inline-flex; align-items:center; gap:6px; font-size:10px; font-weight:600; letter-spacing:0.2px; text-transform:none; padding:3px 8px; border-radius:20px; border:1px solid var(--BorderStrong); background: var(--Panel2); color: var(--Text3); max-width: 220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.AudioPreviewBadge.global { border-color: var(--AccentBlue); color: var(--AccentBlue); background: rgba(78,168,232,0.12); }
+.AudioPreviewBadge.mix { border-color: var(--AccentGreen); color: var(--AccentGreen); background: rgba(126,217,87,0.12); }
+.AudioPreviewBadge.muted { border-color: var(--BorderStrong); color: var(--Text4); }
+.AudioPreviewBadge.loading { border-color: var(--Warn); color: var(--Warn); background: rgba(232,195,78,0.12); }
+@media (max-width: 520px) {
+  .TrackRow { gap: 6px; }
+  .VolumeSlider { flex: 1 1 80px; }
+}
 
 /* ===== CORTE ===== */
 .CutModes { display: flex; gap: 8px; margin-bottom: 10px; }
@@ -460,7 +495,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .marker { position: absolute; top: 0; height: 100%; width: 3px; background: var(--Accent); pointer-events: none; display: none; z-index: 3; }
 .markerStart { background: #4caf50; }
 .markerEnd { background: #f44336; }
-.markerLabel { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--Text3); white-space: nowrap; padding: 1px 4px; background: var(--Panel1); border-radius: 3px; margin-bottom: 2px; }
+.markerLabel { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--Text3); white-space: nowrap; padding: 1px 4px; background: var(--Panel2); border: 1px solid var(--Border); border-radius: 3px; margin-bottom: 2px; }
 .PlayerControls { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--Text3); }
 .PlayerBtn { background: var(--Panel2); border: 1px solid var(--BorderStrong); border-radius: var(--Radius); padding: 8px 16px; color: var(--Text); cursor: pointer; }
 .PlayerBtn:hover { border-color: var(--Accent); }

@@ -17,6 +17,16 @@ let lastSliderQuality = 23;
 let lastSliderBitrate = 6;
 let VideoInfoRequestSeq = 0;
 
+// ========== AUDIO PREVIEW (mezcla audible) ==========
+let PreviewAudioCtx = null;
+let PreviewAudioGain = null;
+let PreviewMediaSource = null;
+let PreviewExtractedAudios = []; // {track, audioEl, gainNode, srcPath}
+let PreviewExtractCacheKey = null;
+let PreviewUsingExtraction = false;
+let PreviewSyncRaf = null;
+let PreviewPendingExtract = 0;
+
 // Cache lazy de elementos DOM consultados frecuentemente (UpdateProgress corre 30-60 Hz).
 // Se inicializa una sola vez en DOMContentLoaded para evitar getElementById por cada progress.
 const DomCache = {};
@@ -87,6 +97,8 @@ const Icons = {
     dot: '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg>',
     scissors: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>',
     audio: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
+    volume: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>',
+    mute: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M16 9 22 15M22 9 16 15"/></svg>',
     info: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>',
     empty: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>',
     clock: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
@@ -207,8 +219,7 @@ function RenderPresetsList() {
         return;
     }
     Object.entries(CurrentPresets).forEach(([Key, Preset]) => {
-        const meta = CodecMeta[Preset.codec];
-        const CodecName = meta ? (meta.hwtag ? `${meta.label} · GPU` : `${meta.label} · CPU`) : Preset.codec;
+        const CodecName = Preset.codec;
         const Resolution = Preset.resolution === 'original' ? 'Original' : Preset.resolution;
         const Item = document.createElement('div');
         Item.className = 'QueueItem';
@@ -279,8 +290,7 @@ function UpdatePresetPreview() {
     const Preview = document.getElementById("presetPreview");
     if (!Preview) return;
     const s = GetCurrentSettings();
-    const meta = CodecMeta[s.codec];
-    const CodecName = meta ? (meta.hwtag ? `${meta.label} · GPU` : meta.label) : s.codec;
+    const CodecName = s.codec;
     const rcLabel = { cq: `CQ ${s.quality}`, vbr: `VBR ${s.bitrate}M`, cbr: `CBR ${s.bitrate}M` }[s.rate_control] || s.rate_control;
     Preview.innerHTML = `Codec: ${CodecName} | ${rcLabel} | ${s.resolution === 'original' ? 'Original' : s.resolution}<br>FPS: ${s.fps === 'original' ? 'Original' : s.fps}`;
 }
@@ -427,45 +437,49 @@ function RenderCodecSelector() {
         return { cpu, gpu };
     };
 
-    const curMeta = CodecMeta[SelectedCodec];
-    const curLabel = curMeta ? curMeta.label : null;
-    const curEngine = SelectedCodec.startsWith("lib") ? "cpu" : "gpu";
+    const isRelevant = (name) => {
+        if (name.endsWith("_nvenc") && FfmpegCaps.gpu !== "nvidia") return false;
+        if (name.endsWith("_amf") && FfmpegCaps.gpu !== "amd") return false;
+        if (name.endsWith("_qsv") && FfmpegCaps.gpu !== "intel") return false;
+        if (name.endsWith("_vaapi") || name.endsWith("_v4l2m2m") || name.endsWith("_videotoolbox")) return false;
+        return true;
+    };
+    const relevantEncoders = (FfmpegCaps.video_encoders || []).filter(isRelevant);
 
-    const MainFamilies = ["H.264", "H.265", "AV1"];
-    const mainVariants = MainFamilies
-        .map(label => ({ label, v: variantsFor(label) }))
-        .filter(x => x.v.cpu || x.v.gpu);
-    const shown = new Set();
-    mainVariants.forEach(({ v }) => {
-        if (v.cpu) shown.add(v.cpu);
-        if (v.gpu) shown.add(v.gpu);
-    });
-    const otherEncoders = (FfmpegCaps.video_encoders || [])
+    const usage = FfmpegCaps.usage || {};
+    const sortedUsage = Object.entries(usage)
+        .filter(([name]) => relevantEncoders.includes(name))
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([name]) => name);
+    let outsideEncoders = sortedUsage.slice(0, 3);
+    if (outsideEncoders.length < 3) {
+        const defaults = ["libx264", "libx265", "libsvtav1"].filter(n => relevantEncoders.includes(n) && !outsideEncoders.includes(n));
+        for (const d of defaults) {
+            if (outsideEncoders.length >= 3) break;
+            outsideEncoders.push(d);
+        }
+    }
+    if (outsideEncoders.length === 0) outsideEncoders = relevantEncoders.slice(0, 3);
+    outsideEncoders = [...new Set(outsideEncoders)].slice(0, 3);
+
+    const shown = new Set(outsideEncoders);
+    const otherEncoders = relevantEncoders
         .filter(name => !shown.has(name))
-        .filter(name => {
-            if (name.endsWith("_nvenc") && FfmpegCaps.gpu !== "nvidia") return false;
-            if (name.endsWith("_amf") && FfmpegCaps.gpu !== "amd") return false;
-            if (name.endsWith("_qsv") && FfmpegCaps.gpu !== "intel") return false;
-            if (name.endsWith("_vaapi") || name.endsWith("_v4l2m2m") || name.endsWith("_videotoolbox")) return false;
-            return true;
-        })
         .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 
-    AvailableCodecs = new Set();
+    AvailableCodecs = new Set([...outsideEncoders, ...otherEncoders]);
 
     const seg = document.createElement("div");
     seg.className = "CodecSeg";
 
-    mainVariants.forEach(({ label, v }) => {
-        if (v.cpu) AvailableCodecs.add(v.cpu);
-        if (v.gpu) AvailableCodecs.add(v.gpu);
+    outsideEncoders.forEach(name => {
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = "CodecSegBtn" + (curLabel === label ? " on" : "");
-        btn.textContent = label;
+        btn.className = "CodecSegBtn" + (SelectedCodec === name ? " on" : "");
+        btn.textContent = name;
+        btn.title = name;
         btn.addEventListener("click", () => {
-            if (curLabel === label) return;
-            SelectCodec(curEngine === "gpu" && v.gpu ? v.gpu : (v.cpu || v.gpu));
+            if (SelectedCodec !== name) SelectCodec(name);
         });
         seg.appendChild(btn);
     });
@@ -503,7 +517,6 @@ function RenderCodecSelector() {
         emptyMsg.className = "OthersEmpty";
         emptyMsg.textContent = "Sin resultados";
         otherEncoders.forEach(name => {
-            AvailableCodecs.add(name);
             const item = document.createElement("button");
             item.type = "button";
             item.className = "OthersItem";
@@ -543,36 +556,6 @@ function RenderCodecSelector() {
 
     Row.appendChild(seg);
 
-    if (curLabel) {
-        const v = variantsFor(curLabel);
-        const engines = [];
-        if (v.cpu) engines.push({ key: "cpu", codec: v.cpu, text: "CPU" });
-        if (v.gpu) engines.push({ key: "gpu", codec: v.gpu, text: "GPU" });
-        if (engines.length > 0) {
-            const engRow = document.createElement("div");
-            engRow.className = "EngineRow";
-            const lbl = document.createElement("span");
-            lbl.className = "EngineLbl";
-            lbl.textContent = "Motor";
-            const engSeg = document.createElement("div");
-            engSeg.className = "CodecSeg EngineSeg";
-            engines.forEach(({ key, codec, text }) => {
-                AvailableCodecs.add(codec);
-                const b = document.createElement("button");
-                b.type = "button";
-                b.className = "CodecSegBtn" + (SelectedCodec === codec ? " on" : "");
-                b.textContent = text;
-                b.addEventListener("click", () => {
-                    if (SelectedCodec !== codec) SelectCodec(codec);
-                });
-                engSeg.appendChild(b);
-            });
-            engRow.appendChild(lbl);
-            engRow.appendChild(engSeg);
-            Row.appendChild(engRow);
-        }
-    }
-
     if (!RenderCodecSelector._bound) {
         RenderCodecSelector._bound = true;
         document.addEventListener("click", (e) => {
@@ -594,10 +577,6 @@ function RenderCodecSelector() {
     }
 
     if (!AvailableCodecs.has(SelectedCodec)) {
-        for (const label of MainFamilies) {
-            const v = variantsFor(label);
-            if (v.cpu || v.gpu) { SelectCodec(v.cpu || v.gpu); return; }
-        }
         const first = AvailableCodecs.values().next().value;
         if (first) SelectCodec(first);
     }
@@ -624,11 +603,12 @@ function AddLog(Message, Type = "info") {
     if (!LogBody) return;
     const Line = document.createElement("div");
     Line.className = `LogLine ${Type}`;
-    Line.textContent = `[${new Date().toLocaleTimeString()}] ${Message}`.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2B00}-\u{2BFF}\u{2705}]/gu, '');
+    const clean = Message.replace(/[\p{Extended_Pictographic}\u2600-\u27BF\u2300-\u23FF\u2B00-\u2BFF]/gu, '').replace(/[\uFE0F\u200D]/gu, '').replace(/\s{2,}/g, ' ').trim();
+    Line.textContent = `[${new Date().toLocaleTimeString()}] ${clean}`;
     LogBody.appendChild(Line);
     LogBody.scrollTop = LogBody.scrollHeight;
     const logPreview = document.getElementById("logPreview");
-    if (logPreview) logPreview.textContent = Message.substring(0, 100);
+    if (logPreview) logPreview.textContent = clean.substring(0, 100);
 }
 
 function HandleBackendMessage(Data) {
@@ -710,7 +690,7 @@ function HandleBackendMessage(Data) {
             AddLog(Data.line, Data.type || "debug");
             break;
 
-        case "video_info":
+            case "video_info":
             if (!CurrentVideoPath) {
                 break;
             }
@@ -722,7 +702,7 @@ function HandleBackendMessage(Data) {
                 CurrentVideoInfo.path = CurrentVideoPath;
                 UpdateVideoInfoDisplay(CurrentVideoInfo);
                 const ActiveItem = FileQueue.find(f => f.path === CurrentVideoPath);
-                UpdateAudioTracks(CurrentVideoInfo, ActiveItem ? ActiveItem.audio_tracks : null);
+                UpdateAudioTracks(CurrentVideoInfo, ActiveItem ? ActiveItem.audio_tracks : null, ActiveItem ? ActiveItem.audio_volumes : null);
                 UpdateEstimatedTotalFrames();
                 AddLog(`Archivo cargado: ${Data.info.filename}`, "success");
             } else if (!Data.success) {
@@ -840,14 +820,26 @@ function UpdateVideoInfoDisplay(Info) {
     UpdateNamePreview();
 }
 
-function UpdateAudioTracks(Info, savedTracks) {
+function UpdateAudioTracks(Info, savedTracks, savedVolumes) {
     const Container = document.getElementById("audioTracksContainer");
     if (!Container) return;
     Container.innerHTML = "";
 
     if (!Info.audio_tracks || Info.audio_tracks.length === 0) {
         Container.innerHTML = '<div style="color: var(--Text3); padding: 8px;">No se detectaron pistas de audio</div>';
+        const badge = document.getElementById("audioPreviewStatus");
+        if (badge) badge.style.display = "none";
         return;
+    }
+
+    // Resolver volúmenes guardados: param explícito o del item de cola actual
+    let resolvedVolumes = savedVolumes;
+    if (resolvedVolumes === undefined) {
+        const curItem = FileQueue.find(f => f.path === CurrentVideoPath);
+        resolvedVolumes = curItem?.audio_volumes || {};
+    }
+    if (resolvedVolumes == null || typeof resolvedVolumes !== 'object' || Array.isArray(resolvedVolumes)) {
+        resolvedVolumes = {};
     }
 
     Info.audio_tracks.forEach((Track) => {
@@ -859,27 +851,462 @@ function UpdateAudioTracks(Info, savedTracks) {
         if (Track.channels) trackInfo.push(`${Track.channels}ch`);
         if (Track.language && Track.language !== 'unknown') trackInfo.push(Track.language);
         const infoStr = trackInfo.length ? ` (${trackInfo.join(', ')})` : '';
-
         const Label = Track.title ? Track.title : `Track ${Track.index}`;
-        Div.innerHTML = `<input type="checkbox" class="audio-track-cb" data-track="${Track.index}"><span>${Label}${infoStr}</span>`;
+        const vol = resolvedVolumes[Track.index] != null ? parseInt(resolvedVolumes[Track.index]) : 100;
+        const clampedVol = Math.max(0, Math.min(200, vol));
+        const badgeCls = clampedVol === 0 ? 'VolumeBadge muted' : clampedVol !== 100 ? 'VolumeBadge boosted' : 'VolumeBadge';
+        const muteLabel = clampedVol === 0 ? Icons.mute : Icons.volume;
+
+        Div.innerHTML = `<label class="AudioCheckWrap"><input type="checkbox" class="audio-track-cb" data-track="${Track.index}"><span class="AudioCheck" aria-hidden="true"><svg viewBox="0 0 12 10"><path d="M1 5 L4.5 8.5 L11 1.5"/></svg></span></label><span title="${escapeHtml(Label)}${escapeHtml(infoStr)}">${escapeHtml(Label)}${escapeHtml(infoStr)}</span><input type="range" class="VolumeSlider" data-track="${Track.index}" min="0" max="200" value="${clampedVol}" title="Volumen ${clampedVol}%"><span class="${badgeCls}" data-track="${Track.index}">${clampedVol}%</span><button type="button" class="VolumeMuteBtn${clampedVol === 0 ? ' on' : ''}" data-track="${Track.index}" title="${clampedVol === 0 ? 'Restaurar volumen' : 'Silenciar'}">${muteLabel}</button>`;
         Container.appendChild(Div);
     });
 
     // Restaurar selección guardada del queue item, o marcar primera pista por defecto
     if (Array.isArray(savedTracks)) {
-        // [] = mudo explícito; [1,2] = pistas elegidas
         savedTracks.forEach(trackIdx => {
             const cb = Container.querySelector(`.audio-track-cb[data-track="${trackIdx}"]`);
             if (cb) cb.checked = true;
         });
     } else {
-        // Marcar la primera pista de audio disponible (no buscar data-track="0"
-        // porque stream 0 suele ser video, no audio)
         const FirstCb = Container.querySelector('.audio-track-cb');
         if (FirstCb) FirstCb.checked = true;
     }
 
+    // Sincronizar estado deshabilitado del slider según checkbox
+    Container.querySelectorAll('.TrackRow').forEach(row => {
+        const cb = row.querySelector('.audio-track-cb');
+        const slider = row.querySelector('.VolumeSlider');
+        const muteBtn = row.querySelector('.VolumeMuteBtn');
+        if (cb && slider) {
+            slider.disabled = !cb.checked;
+            if (muteBtn) muteBtn.disabled = !cb.checked;
+            row.style.opacity = cb.checked ? '1' : '0.6';
+        }
+    });
+
     SaveAudioToCurrentQueueItem();
+    // Actualizar preview audible automáticamente (sin recargar video)
+    try { UpdatePreviewAudioMix(); } catch {}
+}
+
+function SaveVolumeToCurrentQueueItem(trackIdx, vol) {
+    const CurrentItem = FileQueue.find(f => f.path === CurrentVideoPath);
+    if (!CurrentItem) return;
+    if (!CurrentItem.audio_volumes || typeof CurrentItem.audio_volumes !== 'object') CurrentItem.audio_volumes = {};
+    const clamped = Math.max(0, Math.min(200, parseInt(vol) || 0));
+    CurrentItem.audio_volumes[trackIdx] = clamped;
+
+    // Actualizar badge en DOM sin re-render completo
+    const Container = document.getElementById("audioTracksContainer");
+    if (Container) {
+        const badge = Container.querySelector(`.VolumeBadge[data-track="${trackIdx}"]`);
+        if (badge) {
+            badge.textContent = `${clamped}%`;
+            badge.className = clamped === 0 ? 'VolumeBadge muted' : clamped !== 100 ? 'VolumeBadge boosted' : 'VolumeBadge';
+        }
+        const muteBtn = Container.querySelector(`.VolumeMuteBtn[data-track="${trackIdx}"]`);
+        if (muteBtn) {
+            muteBtn.classList.toggle('on', clamped === 0);
+            muteBtn.title = clamped === 0 ? 'Restaurar volumen' : 'Silenciar';
+            muteBtn.innerHTML = clamped === 0 ? Icons.mute : Icons.volume;
+        }
+        const slider = Container.querySelector(`.VolumeSlider[data-track="${trackIdx}"]`);
+        if (slider) slider.value = clamped;
+    }
+    RenderQueueList();
+    // Live gain: si ya estamos en modo extracción, solo tocar ese GainNode.
+    // Si estamos en modo global (un solo track), actualizar el GainNode global.
+    // Solo disparar UpdatePreviewAudioMix si cambia el modo (p.ej. 1 track @100 -> 1 track @150
+    // que antes no necesitaba extracción y ahora sí, o selección de pista distinta al default).
+    const stNow = getSelectedAudioState();
+    const wasExtraction = PreviewUsingExtraction;
+    // Consistencia: cualquier pista seleccionada va por extracción
+    const needsExtEffective = stNow.selected.length > 0;
+
+    if (wasExtraction) {
+        let touched = false;
+        PreviewExtractedAudios.forEach(a => {
+            if (a.track === trackIdx) {
+                const g = Math.max(0, Math.min(2, clamped / 100));
+                try {
+                    if (a.gainNode.gain.setTargetAtTime) a.gainNode.gain.setTargetAtTime(g, PreviewAudioCtx ? PreviewAudioCtx.currentTime : 0, 0.02);
+                    else a.gainNode.gain.value = g;
+                } catch { try { a.gainNode.gain.value = g; } catch {} }
+                try { a.audioEl.muted = g === 0; } catch {}
+                try { a.audioEl.volume = Math.max(0, Math.min(1, g)); } catch {}
+                touched = true;
+            }
+        });
+        updateAudioPreviewBadge(stNow.selected, stNow.vols);
+        // Si el modo ya no necesita extracción (volvió a 100 y single default), salir del modo extracción
+        if (!needsExtEffective) { try { UpdatePreviewAudioMix(); } catch {} }
+        else if (!touched) { try { UpdatePreviewAudioMix(); } catch {} }
+        return;
+    }
+    // Modo global: aplicar gain global inmediato (sin debounce) para que el slider se escuche al instante
+    if (!wasExtraction) {
+        // Si ahora necesita extracción, dispararla (debounced dentro de UpdatePreviewAudioMix)
+        if (needsExtEffective) { try { UpdatePreviewAudioMix(); } catch {} return; }
+        // Si sigue en global, actualizar gain: usar GainNode solo para boost >1, si no v.volume directo
+        try {
+            const v = document.getElementById("previewVideo");
+            const avg = stNow.selected.length ? stNow.selected.reduce((a, idx) => a + (stNow.vols[idx] ?? 100), 0) / stNow.selected.length / 100 : 0;
+            const g = Math.max(0, Math.min(2, avg));
+            if (v) v.muted = g === 0;
+            if (g > 1.0 && PreviewAudioGain && PreviewAudioCtx) {
+                if (PreviewAudioCtx.state === "suspended") PreviewAudioCtx.resume().catch(()=>{});
+                if (PreviewAudioGain.gain.setTargetAtTime) PreviewAudioGain.gain.setTargetAtTime(g, PreviewAudioCtx.currentTime, 0.02);
+                else PreviewAudioGain.gain.value = g;
+                if (v) v.volume = 1.0;
+            } else {
+                if (PreviewAudioGain) try { PreviewAudioGain.gain.value = 1.0; } catch {}
+                if (PreviewAudioCtx && PreviewAudioCtx.state === "suspended" && PreviewMediaSource && !PreviewUsingExtraction) {
+                    try { PreviewMediaSource.disconnect(); PreviewAudioGain.disconnect(); } catch {}
+                    PreviewMediaSource = null; PreviewAudioGain = null;
+                }
+                if (v) v.volume = Math.max(0, Math.min(1, g));
+            }
+            updateAudioPreviewBadge(stNow.selected, stNow.vols);
+        } catch {}
+    }
+}
+
+// ========== AUDIO PREVIEW: mezcla audible ==========
+
+function ensurePreviewAudioContext() {
+    if (PreviewAudioCtx) return PreviewAudioCtx;
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        PreviewAudioCtx = new Ctx();
+        return PreviewAudioCtx;
+    } catch { return null; }
+}
+
+function teardownPreviewAudioMix() {
+    // detener sync
+    if (PreviewSyncRaf) { cancelAnimationFrame(PreviewSyncRaf); PreviewSyncRaf = null; }
+    PreviewExtractedAudios.forEach(a => {
+        try { a.audioEl.pause(); } catch {}
+        try { a.audioEl.src = ""; a.audioEl.load(); } catch {}
+        try { if (a.gainNode) a.gainNode.disconnect(); } catch {}
+    });
+    PreviewExtractedAudios = [];
+    PreviewUsingExtraction = false;
+    PreviewExtractCacheKey = null;
+    // no cerrar ctx para reusar; solo desconectar source del video
+    if (PreviewMediaSource) {
+        try { PreviewMediaSource.disconnect(); } catch {}
+        PreviewMediaSource = null;
+    }
+    if (PreviewAudioGain) {
+        try { PreviewAudioGain.disconnect(); } catch {}
+        PreviewAudioGain = null;
+    }
+    const v = document.getElementById("previewVideo");
+    if (v) v.muted = false;
+}
+
+function SetupAudioPreview() {
+    const v = document.getElementById("previewVideo");
+    if (!v) return;
+    // Intentar conectar MediaElementSource -> GainNode una sola vez (global volume)
+    // Esto no rompe preview si falla; fallback silencioso.
+    try {
+        const ctx = ensurePreviewAudioContext();
+        if (!ctx) return;
+        // Si ya hay source, no recrear (MediaElementSource solo una vez por elemento)
+        if (!PreviewMediaSource) {
+            try {
+                PreviewMediaSource = ctx.createMediaElementSource(v);
+                PreviewAudioGain = ctx.createGain();
+                PreviewAudioGain.gain.value = 1.0;
+                PreviewMediaSource.connect(PreviewAudioGain);
+                PreviewAudioGain.connect(ctx.destination);
+            } catch (e) {
+                // Si ya fue conectado antes, el browser lanza InvalidStateError; ignorar
+                if (!String(e).includes("already connected")) console.warn("SetupAudioPreview:", e);
+            }
+        }
+        // Wire sync de play/pause/seek para audios extraídos (idempotente)
+        if (!v._previewAudioWired) {
+            v._previewAudioWired = true;
+            const resumeCtx = () => { try { if (PreviewAudioCtx && PreviewAudioCtx.state === "suspended") PreviewAudioCtx.resume(); } catch {} };
+            v.addEventListener("play", () => { resumeCtx(); if (PreviewUsingExtraction) PreviewExtractedAudios.forEach(a => { a.audioEl.play().catch(()=>{}); }); });
+            v.addEventListener("pause", () => { if (PreviewUsingExtraction) PreviewExtractedAudios.forEach(a => a.audioEl.pause()); });
+            v.addEventListener("seeking", () => { if (PreviewUsingExtraction) PreviewExtractedAudios.forEach(a => { try { a.audioEl.currentTime = v.currentTime; } catch {} }); });
+            v.addEventListener("seeked", () => { if (PreviewUsingExtraction) PreviewExtractedAudios.forEach(a => { try { a.audioEl.currentTime = v.currentTime; } catch {} }); });
+            v.addEventListener("ratechange", () => { if (PreviewUsingExtraction) PreviewExtractedAudios.forEach(a => { try { a.audioEl.playbackRate = v.playbackRate; } catch {} }); });
+            v.addEventListener("volumechange", () => { /* video muted state manejado por UpdatePreviewAudioMix */ });
+            // Drift correction suave: solo corregir si el desfase supera 1.2s y han pasado 1.5s desde el último ajuste.
+            // Antes era 0.35s/500ms y causaba que el audio se re-enganchara cada medio segundo
+            // y pareciera loopeado en 1s cuando el slider movía el gain durante playback.
+            let lastSync = 0;
+            v.addEventListener("timeupdate", () => {
+                if (!PreviewUsingExtraction || PreviewExtractedAudios.length === 0) return;
+                if (v.paused || v.seeking) return;
+                const now = performance.now();
+                if (now - lastSync < 1500) return;
+                PreviewExtractedAudios.forEach(a => {
+                    try {
+                        const drift = Math.abs(a.audioEl.currentTime - v.currentTime);
+                        if (drift > 1.2) {
+                            a.audioEl.currentTime = v.currentTime;
+                            lastSync = now;
+                        }
+                    } catch {}
+                });
+            });
+        }
+    } catch (e) { console.warn("SetupAudioPreview fallo:", e); }
+}
+
+function getSelectedAudioState() {
+    const cbs = [...document.querySelectorAll(".audio-track-cb")];
+    const selected = cbs.filter(cb => cb.checked).map(cb => parseInt(cb.dataset.track));
+    const vols = {};
+    document.querySelectorAll(".VolumeSlider").forEach(sl => {
+        const idx = parseInt(sl.dataset.track);
+        vols[idx] = Math.max(0, Math.min(200, parseInt(sl.value) || 100));
+    });
+    return { selected, vols };
+}
+
+function updateAudioPreviewBadge(selected, vols) {
+    const el = document.getElementById("audioPreviewStatus");
+    if (!el) return;
+    if (!CurrentVideoInfo || !CurrentVideoInfo.audio_tracks || CurrentVideoInfo.audio_tracks.length === 0) {
+        el.style.display = "none"; el.textContent = ""; return;
+    }
+    if (selected.length === 0) {
+        el.style.display = "inline-flex";
+        el.textContent = "Preview: sin audio (mute)";
+        el.className = "AudioPreviewBadge muted";
+        return;
+    }
+    const parts = selected.map(idx => {
+        const v = vols[idx] ?? 100;
+        return v === 100 ? `#${idx}` : `#${idx}@${v}%`;
+    });
+    const mode = PreviewUsingExtraction ? "mezcla" : "global";
+    el.style.display = "inline-flex";
+    el.textContent = `Preview audible: ${selected.length} pista(s) [${parts.join(", ")}] · ${mode}`;
+    el.className = "AudioPreviewBadge " + (PreviewUsingExtraction ? "mix" : "global");
+}
+
+function tryApplyAudioTracksApi(selected, vols) {
+    const v = document.getElementById("previewVideo");
+    if (!v || !v.audioTracks || typeof v.audioTracks.length !== "number") return false;
+    try {
+        // audioTracks es Chrome-only; habilita/deshabilita por índice de track 0..n
+        // Mapear: asumimos orden igual a ffprobe audio_tracks (no hay garantía perfecta)
+        // Si longitudes no coinciden, no usar.
+        if (v.audioTracks.length !== (CurrentVideoInfo?.audio_tracks?.length || 0)) return false;
+        const selSet = new Set(selected);
+        for (let i = 0; i < v.audioTracks.length; i++) {
+            const infoIdx = CurrentVideoInfo.audio_tracks[i]?.index;
+            v.audioTracks[i].enabled = selSet.has(infoIdx);
+        }
+        // Volumen global ponderado: promedio de seleccionados (no hay per-track gain en spec)
+        if (selected.length > 0) {
+            const avg = selected.reduce((a, idx) => a + (vols[idx] ?? 100), 0) / selected.length / 100;
+            v.volume = Math.max(0, Math.min(1, avg));
+            v.muted = avg === 0;
+        } else {
+            v.muted = true;
+        }
+        // También aplicar GainNode global si existe para no duplicar
+        if (PreviewAudioGain) {
+            try { PreviewAudioGain.gain.value = 1.0; } catch {}
+        }
+        return true;
+    } catch { return false; }
+}
+
+function applyGlobalGainFallback(selected, vols) {
+    const v = document.getElementById("previewVideo");
+    if (!v) return;
+    if (selected.length === 0) {
+        v.muted = true;
+        if (PreviewAudioGain) try { PreviewAudioGain.gain.value = 0; } catch {}
+        return;
+    }
+    const avg = selected.reduce((a, idx) => a + (vols[idx] ?? 100), 0) / selected.length / 100;
+    const gain = Math.max(0, Math.min(2, avg));
+    v.muted = gain === 0;
+    // Si necesitamos boost >1.0, usar GainNode (puede amplificar hasta 2x). Si no, usar v.volume directo
+    // para no depender de AudioContext suspendido (que silencia el MediaElementSource).
+    if (gain > 1.0 && PreviewAudioGain && PreviewAudioCtx) {
+        try {
+            if (PreviewAudioCtx.state === "suspended") PreviewAudioCtx.resume().catch(()=>{});
+            if (PreviewAudioGain.gain.setTargetAtTime) PreviewAudioGain.gain.setTargetAtTime(gain, PreviewAudioCtx.currentTime, 0.02);
+            else PreviewAudioGain.gain.value = gain;
+            v.volume = 1.0;
+        } catch { v.volume = Math.max(0, Math.min(1, avg)); }
+    } else {
+        // Ruta directa sin AudioContext: usar v.volume (capped 1.0) y asegurar GainNode en 1.0 si existe
+        if (PreviewAudioGain) try { PreviewAudioGain.gain.value = 1.0; } catch {}
+        // Si el contexto está suspendido y teníamos MediaElementSource conectado, desconectarlo
+        // para que el audio no quede silenciado por el graph suspendido. Solo si no estamos en extracción.
+        if (PreviewAudioCtx && PreviewAudioCtx.state === "suspended" && PreviewMediaSource && !PreviewUsingExtraction) {
+            try { PreviewMediaSource.disconnect(); PreviewAudioGain.disconnect(); } catch {}
+            PreviewMediaSource = null; PreviewAudioGain = null;
+        }
+        v.volume = Math.max(0, Math.min(1, gain));
+    }
+}
+
+// Debounce extracción: 350ms
+let _previewMixDebounce = null;
+function UpdatePreviewAudioMix() {
+    const v = document.getElementById("previewVideo");
+    if (!v || !CurrentVideoPath || !CurrentVideoInfo) {
+        updateAudioPreviewBadge([], {});
+        return;
+    }
+    const { selected, vols } = getSelectedAudioState();
+
+    // Consistencia: siempre usar extracción cuando hay pistas seleccionadas (incluso individual @100).
+    // Evita depender de audioTracks API / gain global que dejaba mudo el track 1.
+    if (selected.length === 0) {
+        // Invalidar extracciones pendientes (race si se desactiva mientras se mezclaba)
+        PreviewPendingExtract++;
+        clearTimeout(_previewMixDebounce);
+        teardownPreviewAudioMix();
+        // No crear GainNode innecesario para mute
+        updateAudioPreviewBadge(selected, vols);
+        const v0 = document.getElementById("previewVideo");
+        if (v0) v0.muted = true;
+        return;
+    }
+
+    // Feedback inmediato con gain global mientras se extrae (evita silencio hasta que llegue el wav)
+    SetupAudioPreview();
+    applyGlobalGainFallback(selected, vols);
+    updateAudioPreviewBadge(selected, vols);
+
+    clearTimeout(_previewMixDebounce);
+    _previewMixDebounce = setTimeout(() => doExtractedMix(selected, vols), 350);
+}
+
+async function doExtractedMix(selected, vols) {
+    const v = document.getElementById("previewVideo");
+    if (!v || !CurrentVideoPath) return;
+    const cacheKey = `${CurrentVideoPath}::${selected.slice().sort((a,b)=>a-b).join(",")}`;
+    if (PreviewExtractCacheKey === cacheKey && PreviewUsingExtraction && PreviewExtractedAudios.length === selected.length) {
+        // solo actualizar gains
+        PreviewExtractedAudios.forEach(a => {
+            const gain = (vols[a.track] ?? 100) / 100;
+            try { a.gainNode.gain.value = Math.max(0, Math.min(2, gain)); a.audioEl.muted = gain === 0; } catch {}
+        });
+        updateAudioPreviewBadge(selected, vols);
+        return;
+    }
+    const mySeq = ++PreviewPendingExtract;
+    const statusEl = document.getElementById("audioPreviewStatus");
+    if (statusEl) { statusEl.textContent = "Extrayendo audios para preview…"; statusEl.className = "AudioPreviewBadge loading"; }
+    try {
+        const results = await invoke("extract_audio_preview", { path: CurrentVideoPath, tracks: selected });
+        if (mySeq !== PreviewPendingExtract) return; // stale por nueva extracción
+        // Race: si se desactivó un audio mientras se extraía, la selección actual ya no coincide
+        const { selected: curSel, vols: curVols } = getSelectedAudioState();
+        const curKey = `${CurrentVideoPath}::${curSel.slice().sort((a,b)=>a-b).join(",")}`;
+        if (curKey !== cacheKey) {
+            // Descartar resultado obsoleto y re-programar con la selección vigente
+            clearTimeout(_previewMixDebounce);
+            if (curSel.length === 0) {
+                teardownPreviewAudioMix();
+                updateAudioPreviewBadge(curSel, curVols);
+                const stEl = document.getElementById("audioPreviewStatus");
+                if (stEl) { stEl.textContent = "Preview: sin audio (mute)"; stEl.className = "AudioPreviewBadge muted"; }
+            } else {
+                _previewMixDebounce = setTimeout(() => doExtractedMix(curSel, curVols), 100);
+            }
+            return;
+        }
+        if (!results || results.length === 0) throw new Error("Sin audios extraídos");
+        // Limpiar audios previos
+        PreviewExtractedAudios.forEach(a => { try { a.audioEl.pause(); a.audioEl.src=""; } catch {} try { a.gainNode.disconnect(); } catch {} });
+        PreviewExtractedAudios = [];
+        const ctx = ensurePreviewAudioContext();
+        if (!ctx) throw new Error("AudioContext no disponible");
+        if (ctx.state === "suspended") await ctx.resume().catch(()=>{});
+        // Para cada wav, crear <audio> + GainNode
+        for (const r of results) {
+            const audioEl = new Audio();
+            audioEl.preload = "auto";
+            audioEl.src = convertFileSrc(r.wav_path);
+            audioEl.crossOrigin = "anonymous";
+            audioEl.loop = false;
+            audioEl.muted = false;
+            // sincronizar tiempo inicial
+            try { audioEl.currentTime = v.currentTime || 0; } catch {}
+            audioEl.playbackRate = v.playbackRate || 1;
+            // Crear GainNode por pista
+            let gainNode;
+            try {
+                const src = ctx.createMediaElementSource(audioEl);
+                gainNode = ctx.createGain();
+                const g = (vols[r.track] ?? 100) / 100;
+                gainNode.gain.value = Math.max(0, Math.min(2, g));
+                src.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                // guardar ref source para posible disconnect futuro
+                audioEl._mediaSrc = src;
+            } catch (e) {
+                // Fallback: usar audioEl.volume si createMediaElementSource falla (CORS/autoplay)
+                gainNode = { gain: { value: 1, set value(v){ audioEl.volume = Math.max(0, Math.min(1, v)); } } };
+                const g = (vols[r.track] ?? 100) / 100;
+                audioEl.volume = Math.max(0, Math.min(1, g));
+                console.warn("MediaElementSource fallo, usando volume:", e);
+            }
+            try { audioEl.load(); } catch {}
+            // Si ya está en canplay, sincronizar al instante; si no, hacerlo cuando esté listo
+            audioEl.addEventListener("canplay", () => { try { if (PreviewUsingExtraction) audioEl.currentTime = v.currentTime || 0; } catch {} }, { once: true });
+            PreviewExtractedAudios.push({ track: r.track, audioEl, gainNode, wavPath: r.wav_path });
+        }
+        // Mutear video original para evitar doblar audio
+        v.muted = true;
+        if (PreviewAudioGain) try { PreviewAudioGain.gain.value = 0; } catch {}
+        PreviewUsingExtraction = true;
+        PreviewExtractCacheKey = cacheKey;
+        // Sincronizar play/pause inmediato
+        if (!v.paused) {
+            PreviewExtractedAudios.forEach(a => a.audioEl.play().catch(()=>{}));
+        }
+        // Sincronización ligera: solo corregir desfase grande.
+        // El loop anterior hacía requestAnimationFrame cada frame y corregía a 0.4s,
+        // lo que al mover el slider (que toca el gain) dejaba el audioEl atascado
+        // en un bucle de 1s. Ahora solo corregimos cada ~1s y con umbral 1.2s.
+        let lastRafSync = 0;
+        const tick = () => {
+            if (!PreviewUsingExtraction) return;
+            PreviewSyncRaf = requestAnimationFrame(tick);
+            if (v.paused || v.seeking) return;
+            const now = performance.now();
+            if (now - lastRafSync < 1000) return;
+            PreviewExtractedAudios.forEach(a => {
+                try {
+                    if (Math.abs(a.audioEl.currentTime - v.currentTime) > 1.2) {
+                        a.audioEl.currentTime = v.currentTime;
+                        lastRafSync = now;
+                    }
+                } catch {}
+            });
+        };
+        if (PreviewSyncRaf) cancelAnimationFrame(PreviewSyncRaf);
+        PreviewSyncRaf = requestAnimationFrame(tick);
+        updateAudioPreviewBadge(selected, vols);
+        AddLog(`Preview mezcla audible: ${selected.length} pista(s) @ ${selected.map(i=>`${i}:${vols[i]??100}%`).join(", ")}`, "success");
+    } catch (e) {
+        console.warn("extract_audio_preview fallo:", e);
+        // Fallback a gain global sin romper preview
+        PreviewUsingExtraction = false;
+        applyGlobalGainFallback(selected, vols);
+        updateAudioPreviewBadge(selected, vols);
+        AddLog(`Preview fallback global (extracción falló: ${String(e).slice(0,80)})`, "warning");
+        // TODO: picks futuras — cachear slice corto en lugar de full wav para acelerar
+    }
 }
 
 function UpdateVideoPreview(videoPath) {
@@ -900,11 +1327,20 @@ function UpdateVideoPreview(videoPath) {
         previewVideo.preload = "metadata";
 
         AddLog(`📹 Preview cargado: ${videoPath.split(/[\\/]/).pop()}`, "info");
+        // Reset extracción previa al cambiar de archivo
+        teardownPreviewAudioMix();
+        SetupAudioPreview();
+        previewVideo.onloadedmetadata = () => { UpdatePreviewAudioMix(); };
+        // si metadata ya está cacheada, igual disparar
+        setTimeout(() => UpdatePreviewAudioMix(), 400);
     } else {
+        teardownPreviewAudioMix();
         previewSource.src = "";
         previewVideo.load();
         if (videoPlaceholder) videoPlaceholder.style.display = "flex";
         previewVideo.style.display = "none";
+        const badge = document.getElementById("audioPreviewStatus");
+        if (badge) { badge.style.display = "none"; }
     }
 }
 
@@ -1100,7 +1536,7 @@ function UpdateNamePreview() {
     const Template = document.getElementById("nameTemplate")?.value || "{nombre}_{codec}_q{qp}";
     let Preview = Template;
     Preview = Preview.replace("{nombre}", CurrentVideoInfo.filename.replace(/\.[^/.]+$/, ""));
-    Preview = Preview.replace("{codec}", CodecMap[SelectedCodec] || SelectedCodec);
+    Preview = Preview.replace("{codec}", SelectedCodec);
     Preview = Preview.replace("{qp}", document.getElementById("qualitySlider")?.value || "23");
     const Res = document.getElementById("resolutionSelect")?.value;
     Preview = Preview.replace("{res}", Res === "original" ? "orig" : (Res?.split("x")[1] + "p") || "orig");
@@ -1182,10 +1618,11 @@ function SelectCodec(CodecValue) {
     RenderCodecSelector();
 }
 
-function SaveCodecUsage(codec) {
+function SaveCodecUsage(codec, inc = 1) {
     if (!FfmpegCaps) return;
     const usage = FfmpegCaps.usage || {};
-    usage[codec] = (usage[codec] || 0) + 1;
+    usage[codec] = (usage[codec] || 0) + inc;
+    FfmpegCaps.usage = usage;
     invoke("save_codec_usage", { usage }).catch(() => {});
 }
 
@@ -1275,6 +1712,14 @@ async function StartEncode() {
     }
 
     const audioTracks = [...document.querySelectorAll(".audio-track-cb:checked")].map(Cb => parseInt(Cb.dataset.track));
+    const audioVolumes = {};
+    document.querySelectorAll(".VolumeSlider").forEach(sl => {
+        const idx = parseInt(sl.dataset.track);
+        if (audioTracks.includes(idx)) {
+            const v = Math.max(0, Math.min(200, parseInt(sl.value) || 100));
+            audioVolumes[idx] = v;
+        }
+    });
 
     const Params = {
         input_path: CurrentVideoPath,
@@ -1288,7 +1733,8 @@ async function StartEncode() {
         bitrate: GetBitrateValue(),
         rate_control: (document.querySelector("#rateCtrl .RateOpt.on")?.dataset.rc) || "cq",
         audio_tracks: audioTracks,
-        custom_mix: document.getElementById("customMixCheck")?.checked || false,
+        audio_volumes: audioVolumes,
+        custom_mix: false,
         cut_start: document.getElementById("cutCustomBtn")?.classList.contains("on") ? document.getElementById("cutStart")?.value : null,
         cut_end: document.getElementById("cutCustomBtn")?.classList.contains("on") ? document.getElementById("cutEnd")?.value : null,
     };
@@ -1320,6 +1766,8 @@ async function StartEncode() {
     window.currentEncodeCutStartSeconds = cutStartVal ? HmsToSeconds(cutStartVal) : 0;
     IsEncoding = true;
 
+    SaveCodecUsage(SelectedCodec);
+    RenderCodecSelector();
     SendMessage("start_encode", { params: Params });
 }
 
@@ -1590,7 +2038,7 @@ function AddToQueue(filePath) {
         return;
     }
 
-    FileQueue.push({ path: filePath, name: filePath.split(/[\\/]/).pop(), cut_start: null, cut_end: null, audio_tracks: null, audio_track_names: null });
+    FileQueue.push({ path: filePath, name: filePath.split(/[\\/]/).pop(), cut_start: null, cut_end: null, audio_tracks: null, audio_track_names: null, audio_volumes: {} });
 
     if (CurrentQueueSelectedIndex === -1) {
         SelectVideoFromQueue(FileQueue.length - 1);
@@ -1612,9 +2060,13 @@ function ProbeQueueItemAudio(item) {
                 const first = audio[0];
                 item.audio_tracks = [first.index];
                 item.audio_track_names = [first.title || `Track ${first.index}`];
+                item.audio_volumes = { [first.index]: 100 };
+                // Inicializar resto de pistas a 100 para que el payload futuro sea completo si el usuario las activa
+                audio.forEach(t => { if (item.audio_volumes[t.index] == null) item.audio_volumes[t.index] = 100; });
             } else {
                 item.audio_tracks = [];
                 item.audio_track_names = [];
+                item.audio_volumes = {};
             }
             RenderQueueList();
         })
@@ -1689,11 +2141,24 @@ function RenderQueueList() {
 
     container.innerHTML = FileQueue.map((item, idx) => {
         const CutBadge = `<span style="font-size:9px;color:var(--Accent);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.scissors} ${item.cut_start || '00:00:00'} → ${item.cut_end || 'fin'}</span>`;
-        const AudioBadge = Array.isArray(item.audio_tracks)
-            ? (item.audio_tracks.length > 0
-                ? `<span style="font-size:9px;color:var(--Warn);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio} ${(item.audio_track_names || item.audio_tracks.map(i => `Track ${i + 1}`)).join(', ')}</span>`
-                : `<span style="font-size:9px;color:var(--Text3);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio} Sin audio</span>`)
-            : `<span style="font-size:9px;color:var(--Text3);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio}</span>`;
+        let AudioBadge;
+        if (Array.isArray(item.audio_tracks)) {
+            if (item.audio_tracks.length > 0) {
+                const vols = item.audio_volumes || {};
+                const names = (item.audio_track_names || item.audio_tracks.map(i => `Track ${i + 1}`));
+                const parts = item.audio_tracks.map((trackIdx, i) => {
+                    const name = names[i] || `Track ${trackIdx + 1}`;
+                    const v = vols[trackIdx];
+                    const volStr = (v != null && v !== 100) ? ` @${v}%` : '';
+                    return `${name}${volStr}`;
+                });
+                AudioBadge = `<span style="font-size:9px;color:var(--Warn);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio} ${parts.join(', ')}</span>`;
+            } else {
+                AudioBadge = `<span style="font-size:9px;color:var(--Text3);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio} Sin audio</span>`;
+            }
+        } else {
+            AudioBadge = `<span style="font-size:9px;color:var(--Text3);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio}</span>`;
+        }
         return `
             <div class="QueueItem ${idx === CurrentQueueSelectedIndex ? 'active' : ''}" data-queue-index="${idx}">
                 <div style="flex:1;min-width:0;overflow:hidden">
@@ -1752,7 +2217,19 @@ function SaveAudioToCurrentQueueItem() {
     } else {
         CurrentItem.audio_track_names = null;
     }
+    // Persistir volúmenes de todas las pistas visibles (para restaurar al re-marcar)
+    if (!CurrentItem.audio_volumes || typeof CurrentItem.audio_volumes !== 'object') CurrentItem.audio_volumes = {};
+    document.querySelectorAll('.VolumeSlider').forEach(sl => {
+        const idx = parseInt(sl.dataset.track);
+        const v = Math.max(0, Math.min(200, parseInt(sl.value) || 100));
+        CurrentItem.audio_volumes[idx] = v;
+    });
+    // Asegurar que pistas seleccionadas tengan volumen (default 100 si falta)
+    SelectedTracks.forEach(idx => {
+        if (CurrentItem.audio_volumes[idx] == null) CurrentItem.audio_volumes[idx] = 100;
+    });
     RenderQueueList();
+    try { UpdatePreviewAudioMix(); } catch {}
 }
 
 function RestoreCutStateFromItem(Item) {
@@ -1799,6 +2276,11 @@ async function ProcessQueue() {
     }
 
     const audioTracks = [...document.querySelectorAll(".audio-track-cb:checked")].map(Cb => parseInt(Cb.dataset.track));
+    const baseVolumes = {};
+    document.querySelectorAll(".VolumeSlider").forEach(sl => {
+        const idx = parseInt(sl.dataset.track);
+        if (audioTracks.includes(idx)) baseVolumes[idx] = Math.max(0, Math.min(200, parseInt(sl.value) || 100));
+    });
 
     const baseParams = {
         name_template: document.getElementById("nameTemplate")?.value || "{nombre}_{codec}_q{qp}",
@@ -1810,7 +2292,8 @@ async function ProcessQueue() {
         bitrate: GetBitrateValue(),
         rate_control: (document.querySelector("#rateCtrl .RateOpt.on")?.dataset.rc) || "cq",
         audio_tracks: audioTracks,
-        custom_mix: document.getElementById("customMixCheck")?.checked || false,
+        audio_volumes: baseVolumes,
+        custom_mix: false,
     };
 
     const overrides = new Map();
@@ -1853,6 +2336,16 @@ async function ProcessQueue() {
         } else if (Array.isArray(file.audio_tracks)) {
             Item.audio_tracks = [];
         }
+        if (file.audio_volumes && typeof file.audio_volumes === 'object' && Object.keys(file.audio_volumes).length > 0) {
+            const filtered = {};
+            const tracks = file.audio_tracks || audioTracks;
+            (tracks || []).forEach(idx => {
+                if (file.audio_volumes[idx] != null) filtered[idx] = file.audio_volumes[idx];
+            });
+            // Si el item no tiene tracks definidas aún, enviar todo lo que tenga
+            if (Object.keys(filtered).length === 0) Object.assign(filtered, file.audio_volumes);
+            if (Object.keys(filtered).length > 0) Item.audio_volumes = filtered;
+        }
         return Item;
     });
 
@@ -1865,6 +2358,8 @@ async function ProcessQueue() {
         return;
     }
 
+    SaveCodecUsage(baseParams.codec, queueItems.length);
+    RenderCodecSelector();
     QueueProcessing = true;
     document.getElementById("queueProgress").style.display = "block";
     document.getElementById("queueTotal").textContent = FileQueue.length;
@@ -2251,7 +2746,46 @@ document.addEventListener('DOMContentLoaded', () => {
     if (AudioTracksContainer) {
         AudioTracksContainer.addEventListener("change", (E) => {
             if (E.target.classList.contains("audio-track-cb")) {
+                const row = E.target.closest('.TrackRow');
+                if (row) {
+                    const slider = row.querySelector('.VolumeSlider');
+                    const muteBtn = row.querySelector('.VolumeMuteBtn');
+                    const checked = E.target.checked;
+                    if (slider) slider.disabled = !checked;
+                    if (muteBtn) muteBtn.disabled = !checked;
+                    row.style.opacity = checked ? '1' : '0.6';
+                }
                 SaveAudioToCurrentQueueItem();
+            }
+        });
+        AudioTracksContainer.addEventListener("input", (E) => {
+            if (E.target.classList.contains("VolumeSlider")) {
+                const idx = parseInt(E.target.dataset.track);
+                const val = Math.max(0, Math.min(200, parseInt(E.target.value) || 0));
+                const badge = AudioTracksContainer.querySelector(`.VolumeBadge[data-track="${idx}"]`);
+                if (badge) {
+                    badge.textContent = `${val}%`;
+                    badge.className = val === 0 ? 'VolumeBadge muted' : val !== 100 ? 'VolumeBadge boosted' : 'VolumeBadge';
+                }
+                const muteBtn = AudioTracksContainer.querySelector(`.VolumeMuteBtn[data-track="${idx}"]`);
+                if (muteBtn) {
+                    muteBtn.classList.toggle('on', val === 0);
+                    muteBtn.innerHTML = val === 0 ? Icons.mute : Icons.volume;
+                    muteBtn.title = val === 0 ? 'Restaurar volumen' : 'Silenciar';
+                }
+                SaveVolumeToCurrentQueueItem(idx, val);
+            }
+        });
+        AudioTracksContainer.addEventListener("click", (E) => {
+            const muteBtn = E.target.closest('.VolumeMuteBtn');
+            if (muteBtn) {
+                const idx = parseInt(muteBtn.dataset.track);
+                const slider = AudioTracksContainer.querySelector(`.VolumeSlider[data-track="${idx}"]`);
+                if (!slider || slider.disabled) return;
+                const cur = parseInt(slider.value) || 100;
+                const next = cur === 0 ? 100 : 0;
+                slider.value = next;
+                slider.dispatchEvent(new Event('input', { bubbles: true }));
             }
         });
     }
