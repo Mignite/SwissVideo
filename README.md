@@ -9,7 +9,7 @@ Professional desktop video compressor. Lightweight, no-nonsense alternative to H
 
 > **Status:** works on Windows 10/11. Requires external FFmpeg (see [Prerequisites](#prerequisites)).
 
-> **⚠️ Transparency — heavy AI assistance:** this project was built with **heavy LLM assistance** (Muse Spark / OpenCode) for architecture, Rust/JS implementation and debugging. The author (1st-semester Systems Engineering student — UNAL Medellín) understands the high-level purpose of each module, but **large parts of the codebase are not yet fully understood line-by-line by the author**. It is published honestly as a learning project. **Current plan:** deeply study each part (FFmpeg pipeline, Tauri IPC, state handling) and **progressively rewrite/refactor all code with full personal understanding**. Issues and PRs pointing out confusing or improvable code are welcome — they help that learning.
+> **⚠️ Transparency — heavy AI assistance:** this project was built with **heavy LLM assistance** for architecture, Rust/JS implementation and debugging. The author (1st-semester Systems Engineering student) understands the high-level purpose of each module, but **large parts of the codebase are not yet fully understood line-by-line by the author**. It is published honestly as a learning project. **Current plan:** deeply study each part (FFmpeg pipeline, Tauri IPC, state handling) and **progressively rewrite/refactor all code with full personal understanding**. Issues and PRs pointing out confusing or improvable code are welcome — they help that learning.
 
 ## Screenshots
 

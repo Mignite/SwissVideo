@@ -1,7 +1,14 @@
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { t, applyI18n, setLocale, getLocale, detectLocale } from "./i18n/index.js";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
+
+// ========== I18N INIT ==========
+const __initialLocale = detectLocale();
+setLocale(__initialLocale);
+window.t = t;
+window.applyI18n = applyI18n;
 
 // ========== CONFIGURACIÓN GLOBAL ==========
 let CurrentVideoPath = null;
@@ -143,19 +150,19 @@ async function SendMessage(Action, Payload = {}, RequestId = null) {
             const totalSavedMB = result.reduce((acc, h) => acc + (h.saved_mb || 0), 0);
             HandleBackendMessage({ action: "history_list", history: result.slice(0, 50), total_saved_mb: parseFloat(totalSavedMB.toFixed(1)) });
         } else if (cmd === "start_encode") {
-            HandleBackendMessage({ action: "log", line: "Compresión iniciada", type: "success" });
+            HandleBackendMessage({ action: "log", line: t("log.compressionStarted"), type: "success" });
         } else if (cmd === "stop_encode") {
-            HandleBackendMessage({ action: "log", line: "Compresión detenida por el usuario", type: "warning" });
+            HandleBackendMessage({ action: "log", line: t("log.compressionStoppedByUser"), type: "warning" });
         } else if (cmd === "check_ffmpeg") {
             FfmpegCaps = result;
             HandleBackendMessage({ action: "ffmpeg_caps", caps: result });
         } else if (cmd === "detect_gpu") {
-            const names = { nvidia: "NVIDIA NVENC", amd: "AMD AMF", intel: "Intel QuickSync", cpu: "CPU (sin GPU)" };
-            HandleBackendMessage({ action: "log", line: `Aceleracion GPU activada (${names[result] || result})`, type: "info" });
+            const names = { nvidia: t("gpu.nvidia"), amd: t("gpu.amd"), intel: t("gpu.intel"), cpu: t("gpu.cpu") };
+            HandleBackendMessage({ action: "log", line: t("log.gpuEnabled", { gpu: names[result] || result }), type: "info" });
         } else if (cmd === "start_queue") {
-            HandleBackendMessage({ action: "log", line: "Cola de procesamiento iniciada", type: "success" });
+            HandleBackendMessage({ action: "log", line: t("log.queueInitiated"), type: "success" });
         } else if (cmd === "stop_queue") {
-            HandleBackendMessage({ action: "log", line: "Cola detenida por el usuario", type: "warning" });
+            HandleBackendMessage({ action: "log", line: t("log.queueStoppedByUser"), type: "warning" });
         }
         return true;
     } catch (e) {
@@ -164,7 +171,7 @@ async function SendMessage(Action, Payload = {}, RequestId = null) {
         } else if (cmd === "start_encode" || cmd === "stop_encode" || cmd === "start_queue" || cmd === "stop_queue") {
             HandleBackendMessage({ action: "encode_finished", success: false, error: e.toString() });
         }
-        HandleBackendMessage({ action: "log", line: `Error: ${e}`, type: "error" });
+        HandleBackendMessage({ action: "log", line: t("log.errorGeneric", { error: e }), type: "error" });
         return false;
     }
 }
@@ -183,7 +190,7 @@ function RenderPresetsBar() {
         const Chip = document.createElement('div');
         Chip.className = 'PresetChip';
         Chip.textContent = Preset.name || Key;
-        Chip.title = Preset.description || `Aplicar ${Preset.name}`;
+        Chip.title = Preset.description || `${t("presets.apply")} ${Preset.name}`;
         if (CurrentActivePresetKey === Key) {
             Chip.style.background = 'var(--AccentDim)';
             Chip.style.borderColor = 'var(--Accent)';
@@ -195,7 +202,7 @@ function RenderPresetsBar() {
     if (Object.keys(CurrentPresets).length > 6) {
         const MoreChip = document.createElement('div');
         MoreChip.className = 'PresetChip';
-        MoreChip.textContent = `+${Object.keys(CurrentPresets).length - 6} más`;
+        MoreChip.textContent = t("presets.more", { count: Object.keys(CurrentPresets).length - 6 });
         MoreChip.addEventListener('click', () => OpenPresetManager());
         Container.appendChild(MoreChip);
     }
@@ -215,23 +222,23 @@ function RenderPresetsList() {
     if (!Container) return;
     Container.innerHTML = '';
     if (Object.keys(CurrentPresets).length === 0) {
-        Container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--Text3);">${Icons.box} No hay presets.<br>Haz click en "Nuevo Preset" para crear uno.</div>`;
+        Container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--Text3);">${Icons.box} ${t("presets.empty")}</div>`;
         return;
     }
     Object.entries(CurrentPresets).forEach(([Key, Preset]) => {
         const CodecName = Preset.codec;
-        const Resolution = Preset.resolution === 'original' ? 'Original' : Preset.resolution;
+        const Resolution = Preset.resolution === 'original' ? t("quality.original") : Preset.resolution;
         const Item = document.createElement('div');
         Item.className = 'QueueItem';
         Item.innerHTML = `
             <div class="preset-item-header">
                 <div class="preset-name">${escapeHtml(Preset.name)}</div>
-                ${CurrentActivePresetKey === Key ? '<div class="preset-badge">Activo</div>' : ''}
+                ${CurrentActivePresetKey === Key ? `<div class="preset-badge">${t("presets.activeBadge")}</div>` : ''}
             </div>
-            <div class="preset-desc">${escapeHtml(Preset.description || 'Sin descripción')}</div>
+            <div class="preset-desc">${escapeHtml(Preset.description || t("presets.noDesc"))}</div>
             <div class="preset-details">
                 <span>${Icons.film} ${CodecName}</span><span>${Icons.ruler} ${Resolution}</span>
-                <span>${Icons.frames} ${Preset.fps === 'original' ? 'FPS orig' : Preset.fps + ' fps'}</span>
+                <span>${Icons.frames} ${Preset.fps === 'original' ? t("presets.fpsOrig") : Preset.fps + ' fps'}</span>
                 <span>${Icons.gear} ${Preset.rate_control === 'vbr' ? 'VBR' : Preset.rate_control === 'cbr' ? 'CBR' : 'CQ'} ${Preset.rate_control === 'cq' ? Preset.quality : Preset.bitrate + 'M'}</span>
             </div>
             <div class="preset-actions">
@@ -250,7 +257,7 @@ function RenderPresetsList() {
     Container.querySelectorAll('.delete-btn').forEach(Btn => {
         Btn.addEventListener('click', () => {
             const k = Btn.dataset.key;
-            if (confirm(`¿Eliminar el preset "${CurrentPresets[k]?.name}"?`)) {
+            if (confirm(t("confirm.deletePreset", { name: CurrentPresets[k]?.name }))) {
                 SendMessage('delete_preset', { name: k });
                 if (CurrentActivePresetKey === k) {
                     CurrentActivePresetKey = null;
@@ -268,12 +275,12 @@ function OpenEditPresetModal(EditKey = null) {
     const NameInput = document.getElementById("editPresetName");
     const DescInput = document.getElementById("editPresetDesc");
     if (EditKey && CurrentPresets[EditKey]) {
-        Title.textContent = `Editar: ${CurrentPresets[EditKey].name}`;
+        Title.textContent = t("modal.presetEdit.editTitle", { name: CurrentPresets[EditKey].name });
         NameInput.value = CurrentPresets[EditKey].name;
         DescInput.value = CurrentPresets[EditKey].description || '';
         Modal.dataset.editKey = EditKey;
     } else {
-        Title.textContent = "Crear Nuevo Preset";
+        Title.textContent = t("modal.presetEdit.createTitle");
         NameInput.value = '';
         DescInput.value = '';
         delete Modal.dataset.editKey;
@@ -292,7 +299,7 @@ function UpdatePresetPreview() {
     const s = GetCurrentSettings();
     const CodecName = s.codec;
     const rcLabel = { cq: `CQ ${s.quality}`, vbr: `VBR ${s.bitrate}M`, cbr: `CBR ${s.bitrate}M` }[s.rate_control] || s.rate_control;
-    Preview.innerHTML = `Codec: ${CodecName} | ${rcLabel} | ${s.resolution === 'original' ? 'Original' : s.resolution}<br>FPS: ${s.fps === 'original' ? 'Original' : s.fps}`;
+    Preview.innerHTML = `Codec: ${CodecName} | ${rcLabel} | ${s.resolution === 'original' ? t("quality.original") : s.resolution}<br>FPS: ${s.fps === 'original' ? t("quality.original") : s.fps}`;
 }
 
 function GetCurrentSettings() {
@@ -322,7 +329,7 @@ function SaveCurrentPresetFromModal() {
     const Modal = document.getElementById("presetEditModal");
     const EditKey = Modal.dataset.editKey;
     const PresetName = NameInput.value.trim();
-    if (!PresetName) { AddLog("❌ Ingresa un nombre para el preset", "error"); return; }
+    if (!PresetName) { AddLog(t("log.errorEnterPresetName"), "error"); return; }
     const PresetKey = PresetName.toLowerCase().replace(/[^a-z0-9]/g, '_');
     if (EditKey && EditKey !== PresetKey && CurrentPresets[EditKey]) {
         SendMessage('delete_preset', { name: EditKey });
@@ -332,7 +339,7 @@ function SaveCurrentPresetFromModal() {
     Settings.description = DescInput.value.trim() || `${PresetName} - Configuración personalizada`;
     SendMessage('save_preset', { name: PresetKey, preset: Settings });
     CloseEditModal();
-    AddLog(`💾 Preset "${PresetName}" guardado`, "success");
+    AddLog(t("log.presetSaved", { name: PresetName }), "success");
 }
 
 function ApplyPreset(PresetKey, Preset) {
@@ -365,10 +372,10 @@ function ApplyPreset(PresetKey, Preset) {
     const Indicator = document.getElementById("activePresetIndicator");
     if (Indicator) {
         Indicator.style.display = 'block';
-        Indicator.innerHTML = `${Icons.dot} Usando preset: ${Preset.name}`;
+        Indicator.innerHTML = `${Icons.dot} ${t("presets.activeWithName", { name: Preset.name })}`;
         setTimeout(() => { Indicator.style.opacity = '0.5'; }, 2000);
     }
-    AddLog(`✅ Preset "${Preset.name}" aplicado`, "success");
+    AddLog(t("log.presetApplied", { name: Preset.name }), "success");
     UpdateEstimate();
     UpdateNamePreview();
     RenderPresetsBar();
@@ -383,8 +390,8 @@ function ExportAllPresets() {
         A.href = Url; A.download = `swissvideo_presets_${new Date().toISOString().slice(0,19)}.json`;
         document.body.appendChild(A); A.click(); document.body.removeChild(A);
         URL.revokeObjectURL(Url);
-        AddLog(`📁 Exportados ${Object.keys(CurrentPresets).length} presets`, "success");
-    } catch (error) { AddLog(`❌ Error exportando: ${error.message}`, "error"); }
+        AddLog(t("log.presetsExported", { count: Object.keys(CurrentPresets).length }), "success");
+    } catch (error) { AddLog(t("log.errorExport", { error: error.message }), "error"); }
 }
 
 function ImportPresets() {
@@ -400,9 +407,9 @@ function ImportPresets() {
                 Object.entries(Imported).forEach(([Key, Preset]) => {
                     if (Preset.name && Preset.codec) { SendMessage('save_preset', { name: Key, preset: Preset }); Count++; }
                 });
-                AddLog(`✅ Importados ${Count} presets`, "success");
+                AddLog(t("log.presetsImported", { count: Count }), "success");
                 ClosePresetManager();
-            } catch (Err) { AddLog(`❌ Error importando: ${Err.message}`, "error"); }
+            } catch (Err) { AddLog(t("log.errorImport", { error: Err.message }), "error"); }
         };
         Reader.readAsText(File);
     };
@@ -410,12 +417,12 @@ function ImportPresets() {
 }
 
 function ResetDefaultPresets() {
-    if (confirm("¿Restaurar presets por defecto? Se perderán los personalizados.")) {
+    if (confirm(t("confirm.resetPresets"))) {
         SendMessage('reset_default_presets');
         CurrentActivePresetKey = null;
         const ind = document.getElementById("activePresetIndicator");
         if (ind) ind.style.display = 'none';
-        AddLog("🔄 Restaurando presets por defecto...", "info");
+        AddLog(t("log.restoringPresets"), "info");
     }
 }
 
@@ -490,7 +497,7 @@ function RenderCodecSelector() {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "CodecSegBtn" + (otherEncoders.includes(SelectedCodec) ? " on" : "");
-        btn.innerHTML = `Otros ${Chevron}`;
+        btn.innerHTML = `${t("codec.others")} ${Chevron}`;
         btn.addEventListener("click", (e) => {
             e.stopPropagation();
             wrap.classList.toggle("open");
@@ -502,8 +509,8 @@ function RenderCodecSelector() {
         const search = document.createElement("input");
         search.type = "text";
         search.className = "OthersSearch";
-        search.placeholder = "Buscar encoder…";
-        search.setAttribute("aria-label", "Buscar encoder");
+        search.placeholder = t("codec.searchPlaceholder");
+        search.setAttribute("aria-label", t("codec.searchAria"));
         search.addEventListener("click", (e) => e.stopPropagation());
         search.addEventListener("keydown", (e) => {
             if (e.key === "Escape") { e.stopPropagation(); wrap.classList.remove("open"); }
@@ -515,7 +522,7 @@ function RenderCodecSelector() {
         list.className = "OthersList";
         const emptyMsg = document.createElement("div");
         emptyMsg.className = "OthersEmpty";
-        emptyMsg.textContent = "Sin resultados";
+        emptyMsg.textContent = t("codec.noResults");
         otherEncoders.forEach(name => {
             const item = document.createElement("button");
             item.type = "button";
@@ -585,8 +592,8 @@ function RenderCodecSelector() {
 function ApplyFfmpegCaps() {
     if (!FfmpegCaps) return;
 
-    const gpuNames = { nvidia: "NVIDIA NVENC", amd: "AMD AMF", intel: "Intel QuickSync", cpu: "CPU (sin GPU)" };
-    AddLog(`FFmpeg detectado: GPU=${gpuNames[FfmpegCaps.gpu] || FfmpegCaps.gpu}`, "info");
+    const gpuNames = { nvidia: t("gpu.nvidia"), amd: t("gpu.amd"), intel: t("gpu.intel"), cpu: t("gpu.cpu") };
+    AddLog(t("log.ffmpegDetected", { gpu: gpuNames[FfmpegCaps.gpu] || FfmpegCaps.gpu }), "info");
 
     RenderCodecSelector();
 }
@@ -621,7 +628,7 @@ function HandleBackendMessage(Data) {
             if (modal && modal.style.display !== 'none') {
                 RenderPresetsList();
             }
-            AddLog(`📦 ${Object.keys(CurrentPresets).length} presets disponibles`, "info");
+            AddLog(t("log.presetsAvailable", { count: Object.keys(CurrentPresets).length }), "info");
             break;
 
         case "presets_updated":
@@ -637,7 +644,7 @@ function HandleBackendMessage(Data) {
             QueueProcessing = true;
             document.getElementById("encodeBtn").style.display = "none";
             document.getElementById("stopBtn").style.display = "block";
-            AddLog(`🚀 Iniciando procesamiento de cola (${Data.total} archivos)`, "success");
+            AddLog(t("log.queueProcessingStarted", { total: Data.total }), "success");
             break;
 
         case "queue_progress":
@@ -645,16 +652,16 @@ function HandleBackendMessage(Data) {
             document.getElementById("queueTotal").textContent = Data.total;
             window.queueCurrentIndex = Data.current;
             window.queueTotalCount = Data.total;
-            AddLog(`📋 Procesando (${Data.current}/${Data.total}): ${Data.filename}`, "info");
+            AddLog(t("log.queueProgress", { current: Data.current, total: Data.total, filename: Data.filename }), "info");
             break;
 
         case "queue_finished":
             QueueProcessing = false;
             document.getElementById("queueProgress").style.display = "none";
             if (Data.stopped) {
-                AddLog(`⏹️ Cola detenida (${Data.total || 0} archivos procesados)`, "warning");
+                AddLog(t("log.queueStopped", { total: Data.total || 0 }), "warning");
             } else {
-                AddLog(`✅ Cola completada (${Data.total} archivos procesados)`, "success");
+                AddLog(t("log.queueFinished", { total: Data.total }), "success");
             }
             FileQueue = [];
             ClearCurrentVideo();
@@ -679,7 +686,7 @@ function HandleBackendMessage(Data) {
                 let savedFactors = JSON.parse(localStorage.getItem('swissvideo_factors') || '{}');
                 savedFactors[Data.key] = Data.factor;
                 localStorage.setItem('swissvideo_factors', JSON.stringify(savedFactors));
-                AddLog(`📊 Factor de compresión guardado: ${Math.round(Data.factor * 100)}% (${Math.round(Data.outputSize)}MB / ${Math.round(Data.originalSize)}MB)`, "info");
+                AddLog(t("log.compressionFactorSaved", { factor: Math.round(Data.factor * 100), output: Math.round(Data.outputSize), original: Math.round(Data.originalSize) }), "info");
                 UpdateEstimate();
             } catch(e) {
                 console.error('Error guardando factor:', e);
@@ -704,9 +711,9 @@ function HandleBackendMessage(Data) {
                 const ActiveItem = FileQueue.find(f => f.path === CurrentVideoPath);
                 UpdateAudioTracks(CurrentVideoInfo, ActiveItem ? ActiveItem.audio_tracks : null, ActiveItem ? ActiveItem.audio_volumes : null);
                 UpdateEstimatedTotalFrames();
-                AddLog(`Archivo cargado: ${Data.info.filename}`, "success");
+                AddLog(t("log.fileLoaded", { name: Data.info.filename }), "success");
             } else if (!Data.success) {
-                AddLog(`Error al analizar: ${Data.error}`, "error");
+                AddLog(t("log.fileAnalyzeError", { error: Data.error }), "error");
             }
             break;
 
@@ -754,10 +761,10 @@ function HandleBackendMessage(Data) {
 
             const statusDiv3 = document.getElementById("encodingStatus");
             if (statusDiv3) {
-                statusDiv3.innerHTML = `${Icons.refresh} Iniciando compresión...`;
+                statusDiv3.innerHTML = `${Icons.refresh} ${t("encode.starting")}`;
                 statusDiv3.style.color = "var(--Warn)";
             }
-            AddLog(`Iniciando compresión`, "success");
+            AddLog(t("log.compressionInitiating"), "success");
             break;
 
         case "encode_finished":
@@ -774,25 +781,25 @@ function HandleBackendMessage(Data) {
             const statusDiv2 = document.getElementById("encodingStatus");
             if (statusDiv2) {
                 if (Data.success) {
-                    statusDiv2.innerHTML = `${Icons.check} Compresión completada`;
+                    statusDiv2.innerHTML = `${Icons.check} ${t("encode.completed")}`;
                     statusDiv2.style.color = "var(--Success)";
                 } else {
-                    statusDiv2.innerHTML = `${Icons.x} Compresión cancelada`;
+                    statusDiv2.innerHTML = `${Icons.x} ${t("encode.cancelled")}`;
                     statusDiv2.style.color = "var(--Danger)";
                 }
                 setTimeout(() => { if (statusDiv2) statusDiv2.innerHTML = ""; }, 5000);
             }
 
             if (Data.success) {
-                AddLog(`✅ Compresión completada: ${Data.output}`, "success");
+                AddLog(t("log.compressionCompleted", { output: Data.output }), "success");
             } else {
-                AddLog(`❌ Error: ${Data.error}`, "error");
+                AddLog(t("log.compressionError", { error: Data.error }), "error");
             }
             break;
 
         case "file_size_warning":
             if (Data.size_mb > 5000) {
-                AddLog(`⚠️ Archivo grande (${(Data.size_mb/1024).toFixed(1)}GB). El análisis inicial puede tardar varios segundos.`, "warning");
+                AddLog(t("log.largeFileWarning", { size: (Data.size_mb/1024).toFixed(1) }), "warning");
             }
             break;
     }
@@ -826,7 +833,7 @@ function UpdateAudioTracks(Info, savedTracks, savedVolumes) {
     Container.innerHTML = "";
 
     if (!Info.audio_tracks || Info.audio_tracks.length === 0) {
-        Container.innerHTML = '<div class="AudioEmpty">Este video no tiene pistas de audio</div>';
+        Container.innerHTML = `<div class="AudioEmpty">${t("audio.emptyNoTracks")}</div>`;
         const badge = document.getElementById("audioPreviewStatus");
         if (badge) badge.style.display = "none";
         return;
@@ -857,7 +864,7 @@ function UpdateAudioTracks(Info, savedTracks, savedVolumes) {
         const badgeCls = clampedVol === 0 ? 'VolumeBadge muted' : clampedVol !== 100 ? 'VolumeBadge boosted' : 'VolumeBadge';
         const muteLabel = clampedVol === 0 ? Icons.mute : Icons.volume;
 
-        Div.innerHTML = `<label class="AudioCheckWrap"><input type="checkbox" class="audio-track-cb" data-track="${Track.index}"><span class="AudioCheck" aria-hidden="true"><svg viewBox="0 0 12 10"><path d="M1 5 L4.5 8.5 L11 1.5"/></svg></span></label><span title="${escapeHtml(Label)}${escapeHtml(infoStr)}">${escapeHtml(Label)}${escapeHtml(infoStr)}</span><input type="range" class="VolumeSlider" data-track="${Track.index}" min="0" max="200" value="${clampedVol}" title="Volumen ${clampedVol}%"><span class="${badgeCls}" data-track="${Track.index}">${clampedVol}%</span><button type="button" class="VolumeMuteBtn${clampedVol === 0 ? ' on' : ''}" data-track="${Track.index}" title="${clampedVol === 0 ? 'Restaurar volumen' : 'Silenciar'}">${muteLabel}</button>`;
+        Div.innerHTML = `<label class="AudioCheckWrap"><input type="checkbox" class="audio-track-cb" data-track="${Track.index}"><span class="AudioCheck" aria-hidden="true"><svg viewBox="0 0 12 10"><path d="M1 5 L4.5 8.5 L11 1.5"/></svg></span></label><span title="${escapeHtml(Label)}${escapeHtml(infoStr)}">${escapeHtml(Label)}${escapeHtml(infoStr)}</span><input type="range" class="VolumeSlider" data-track="${Track.index}" min="0" max="200" value="${clampedVol}" title="${t("audio.volume", { value: clampedVol })}"><span class="${badgeCls}" data-track="${Track.index}">${clampedVol}%</span><button type="button" class="VolumeMuteBtn${clampedVol === 0 ? ' on' : ''}" data-track="${Track.index}" title="${clampedVol === 0 ? t("audio.unmuteTitle") : t("audio.muteTitle")}">${muteLabel}</button>`;
         Container.appendChild(Div);
     });
 
@@ -907,7 +914,7 @@ function SaveVolumeToCurrentQueueItem(trackIdx, vol) {
         const muteBtn = Container.querySelector(`.VolumeMuteBtn[data-track="${trackIdx}"]`);
         if (muteBtn) {
             muteBtn.classList.toggle('on', clamped === 0);
-            muteBtn.title = clamped === 0 ? 'Restaurar volumen' : 'Silenciar';
+            muteBtn.title = clamped === 0 ? t("audio.unmuteTitle") : t("audio.muteTitle");
             muteBtn.innerHTML = clamped === 0 ? Icons.mute : Icons.volume;
         }
         const slider = Container.querySelector(`.VolumeSlider[data-track="${trackIdx}"]`);
@@ -1080,7 +1087,7 @@ function updateAudioPreviewBadge(selected, vols) {
     }
     if (selected.length === 0) {
         el.style.display = "inline-flex";
-        el.textContent = "Preview: sin audio (mute)";
+        el.textContent = t("audio.previewMuted");
         el.className = "AudioPreviewBadge muted";
         return;
     }
@@ -1090,7 +1097,7 @@ function updateAudioPreviewBadge(selected, vols) {
     });
     const mode = PreviewUsingExtraction ? "mezcla" : "global";
     el.style.display = "inline-flex";
-    el.textContent = `Preview audible: ${selected.length} pista(s) [${parts.join(", ")}] · ${mode}`;
+    el.textContent = PreviewUsingExtraction ? t("audio.previewMix", { count: selected.length, parts: parts.join(", ") }) : t("audio.previewGlobal", { count: selected.length, parts: parts.join(", ") });
     el.className = "AudioPreviewBadge " + (PreviewUsingExtraction ? "mix" : "global");
 }
 
@@ -1204,7 +1211,7 @@ async function doExtractedMix(selected, vols) {
     }
     const mySeq = ++PreviewPendingExtract;
     const statusEl = document.getElementById("audioPreviewStatus");
-    if (statusEl) { statusEl.textContent = "Extrayendo audios para preview…"; statusEl.className = "AudioPreviewBadge loading"; }
+    if (statusEl) { statusEl.textContent = t("audio.previewLoading"); statusEl.className = "AudioPreviewBadge loading"; }
     try {
         const results = await invoke("extract_audio_preview", { path: CurrentVideoPath, tracks: selected });
         if (mySeq !== PreviewPendingExtract) return; // stale por nueva extracción
@@ -1218,7 +1225,7 @@ async function doExtractedMix(selected, vols) {
                 teardownPreviewAudioMix();
                 updateAudioPreviewBadge(curSel, curVols);
                 const stEl = document.getElementById("audioPreviewStatus");
-                if (stEl) { stEl.textContent = "Preview: sin audio (mute)"; stEl.className = "AudioPreviewBadge muted"; }
+                if (stEl) { stEl.textContent = t("audio.previewMuted"); stEl.className = "AudioPreviewBadge muted"; }
             } else {
                 _previewMixDebounce = setTimeout(() => doExtractedMix(curSel, curVols), 100);
             }
@@ -1297,14 +1304,14 @@ async function doExtractedMix(selected, vols) {
         if (PreviewSyncRaf) cancelAnimationFrame(PreviewSyncRaf);
         PreviewSyncRaf = requestAnimationFrame(tick);
         updateAudioPreviewBadge(selected, vols);
-        AddLog(`Preview mezcla audible: ${selected.length} pista(s) @ ${selected.map(i=>`${i}:${vols[i]??100}%`).join(", ")}`, "success");
+        AddLog(t("log.previewMix", { count: selected.length, details: selected.map(i=>`${i}:${vols[i]??100}%`).join(", ") }), "success");
     } catch (e) {
         console.warn("extract_audio_preview fallo:", e);
         // Fallback a gain global sin romper preview
         PreviewUsingExtraction = false;
         applyGlobalGainFallback(selected, vols);
         updateAudioPreviewBadge(selected, vols);
-        AddLog(`Preview fallback global (extracción falló: ${String(e).slice(0,80)})`, "warning");
+        AddLog(t("log.previewFallback", { error: String(e).slice(0,80) }), "warning");
         // TODO: picks futuras — cachear slice corto en lugar de full wav para acelerar
     }
 }
@@ -1326,7 +1333,7 @@ function UpdateVideoPreview(videoPath) {
         previewVideo.style.display = "block";
         previewVideo.preload = "metadata";
 
-        AddLog(`📹 Preview cargado: ${videoPath.split(/[\\/]/).pop()}`, "info");
+        AddLog(t("log.previewLoaded", { name: videoPath.split(/[\\/]/).pop() }), "info");
         // Reset extracción previa al cambiar de archivo
         teardownPreviewAudioMix();
         SetupAudioPreview();
@@ -1354,10 +1361,10 @@ function UpdateProgress(Data) {
     if (!FirstFrameReceived && (Data.frames_done > 0 || (Data.current_seconds && Data.current_seconds > 0))) {
         FirstFrameReceived = true;
         if (statusDiv) {
-            statusDiv.innerHTML = `${Icons.film} Comprimiendo video...`;
+            statusDiv.innerHTML = `${Icons.film} ${t("encode.compressing")}`;
             statusDiv.style.color = "var(--Accent)";
         }
-        AddLog("✅ Análisis completado, comenzando compresión", "success");
+        AddLog(t("log.analysisDone"), "success");
     }
 
     if (currentSizeElem && Data.current_size_kb !== undefined) {
@@ -1468,7 +1475,7 @@ function UpdateLiveEstimate(currentSizeMB, currentSeconds) {
     const estReduction = document.getElementById("estReduction");
 
     if (estSize) {
-        estSize.textContent = `~${Math.round(estimatedTotalMB)} MB (en vivo)`;
+        estSize.textContent = t("estimate.live", { value: Math.round(estimatedTotalMB) });
         estSize.style.color = "var(--Accent)";
     }
 
@@ -1499,7 +1506,7 @@ function UpdateEstimate() {
         const estSize = document.getElementById("estSize");
         const estReduction = document.getElementById("estReduction");
         if (estSize) {
-            estSize.textContent = `~${Math.round(EstimatedMb)} MB (historial)`;
+            estSize.textContent = t("estimate.history", { value: Math.round(EstimatedMb) });
             estSize.style.color = "var(--Accent)";
         }
         if (estReduction) {
@@ -1522,7 +1529,7 @@ function UpdateEstimate() {
     const estSize = document.getElementById("estSize");
     const estReduction = document.getElementById("estReduction");
     if (estSize) {
-        estSize.textContent = `~${Math.round(EstimatedMb)} MB (estimado)`;
+        estSize.textContent = t("estimate.guess", { value: Math.round(EstimatedMb) });
         estSize.style.color = "var(--Accent)";
     }
     if (estReduction) {
@@ -1564,11 +1571,10 @@ function UpdateCrfSlider(codec) {
     }
     const label = document.getElementById("qualityLabel");
     if (label) {
-        let mode = "CRF";
-        if (codec.includes("nvenc")) mode = "CQ";
-        else if (codec.includes("amf")) mode = "QP";
-        else if (codec.includes("qsv")) mode = "GQuality";
-        label.textContent = `Calidad (${mode})`;
+        if (codec.includes("nvenc")) label.textContent = t("quality.labelCq");
+        else if (codec.includes("amf")) label.textContent = t("quality.labelQp");
+        else if (codec.includes("qsv")) label.textContent = t("quality.labelGQuality");
+        else label.textContent = t("quality.labelCrf");
     }
 }
 
@@ -1588,7 +1594,7 @@ function UpdateSliderMode() {
         slider.min = 1;
         slider.max = 50;
         slider.value = lastSliderBitrate;
-        if (label) label.textContent = "Bitrate";
+        if (label) label.textContent = t("quality.labelBitrate");
         if (valDisplay) valDisplay.textContent = `${lastSliderBitrate} Mbps`;
     }
 }
@@ -1611,8 +1617,8 @@ function SelectCodec(CodecValue) {
     UpdateNamePreview();
     UpdateEstimate();
     const meta = CodecMeta[CodecValue];
-    const displayName = meta ? (meta.hwtag ? `${meta.label} · GPU` : `${meta.label} · CPU`) : CodecValue;
-    AddLog(`Codec: ${displayName}`, "info");
+    const displayName = meta ? (meta.hwtag ? `${meta.label} · ${t("codec.gpu")}` : `${meta.label} · ${t("codec.cpu")}`) : CodecValue;
+    AddLog(t("log.codecSelected", { name: displayName }), "info");
     SaveCodecUsage(CodecValue);
     ClearActivePresetIfCustomized();
     RenderCodecSelector();
@@ -1639,26 +1645,26 @@ async function StartEncode() {
 
     if (batchMode && FileQueue.length > 0) {
         if (IsEncoding || QueueProcessing) {
-            AddLog("⚠️ Ya hay una tarea activa", "warning");
+            AddLog(t("log.warnTaskActive"), "warning");
             return;
         }
-        AddLog(`🚀 Iniciando procesamiento en lote (${FileQueue.length} archivos)`, "info");
+        AddLog(t("log.queueInitiatedBatch", { count: FileQueue.length }), "info");
         ProcessQueue();
         return;
     }
 
     if (!CurrentVideoPath) {
-        AddLog("❌ Selecciona un video de la cola o carga uno primero", "error");
+        AddLog(t("log.errorSelectVideo"), "error");
         return;
     }
 
     if (IsEncoding) {
-        AddLog("⚠️ Ya hay una compresión activa", "warning");
+        AddLog(t("log.warnEncodingActive"), "warning");
         return;
     }
 
     if (!CurrentVideoInfo || !CurrentVideoInfo.duration_seconds) {
-        AddLog("⏳ Espera a que termine de cargar la información del video", "error");
+        AddLog(t("log.errorWaitInfo"), "error");
         return;
     }
 
@@ -1682,10 +1688,10 @@ async function StartEncode() {
     const statusDiv = document.getElementById("encodingStatus");
     if (statusDiv) {
         if (CurrentVideoInfo && CurrentVideoInfo.size_mb > 5000) {
-            statusDiv.innerHTML = "<span class='analyzing-spinner'></span> Analizando archivo grande... puede tomar hasta 30 segundos";
+            statusDiv.innerHTML = "<span class='analyzing-spinner'></span> " + t("encode.analyzingLarge");
             statusDiv.style.color = "var(--Warn)";
         } else {
-            statusDiv.innerHTML = "<span class='analyzing-spinner'></span> Analizando archivo...";
+            statusDiv.innerHTML = "<span class='analyzing-spinner'></span> " + t("encode.analyzing");
             statusDiv.style.color = "var(--Warn)";
         }
     }
@@ -1694,15 +1700,15 @@ async function StartEncode() {
     if (warningContainer && CurrentVideoInfo && CurrentVideoInfo.size_mb > 5000) {
         warningContainer.innerHTML = `
             <div style="background: rgba(245, 158, 11, 0.15); border-left: 3px solid var(--Warn); padding: 8px 12px; border-radius: 6px; margin-top: 12px; font-size: 11px;">
-                ⏳ <strong>Archivo grande (${(CurrentVideoInfo.size_mb/1024).toFixed(1)}GB)</strong><br>
-                La compresión puede tardar 10-30 segundos en comenzar mientras FFmpeg analiza el archivo.
+                ⏳ <strong>${t("encode.largeWarningTitle", { size: (CurrentVideoInfo.size_mb/1024).toFixed(1) })}</strong><br>
+                ${t("encode.largeWarningBody")}
             </div>
         `;
     } else if (warningContainer) {
         warningContainer.innerHTML = "";
     }
 
-    AddLog("🔄 Iniciando nueva compresión...", "info");
+    AddLog(t("log.startingNewCompression"), "info");
 
     let OutputDir = document.getElementById("destPath")?.value || "";
     const sameFolderCheck = document.getElementById("sameFolderCheck");
@@ -1745,7 +1751,7 @@ async function StartEncode() {
         if (colision && colision.existe) {
             const decision = await preguntarColision(colision);
             if (decision === "cancelar") {
-                AddLog("❌ Compresión cancelada: el archivo de salida ya existe", "warning");
+                AddLog(t("log.compressionCancelledExists"), "warning");
                 return;
             }
             if (decision === "renombrar" && colision.alternativo) {
@@ -1778,13 +1784,23 @@ function preguntarColision(info) {
     return new Promise((resolve) => {
         const Modal = document.getElementById("collisionModal");
         const FileNameEl = document.getElementById("collisionFileName");
+        const CollisionMsg = document.getElementById("collisionMsg");
         const NewNameEl = document.getElementById("collisionNewName");
         const RenameBtn = document.getElementById("collisionRenameBtn");
-        if (FileNameEl && info.salida) FileNameEl.textContent = info.salida.split(/[\\/]/).pop();
+        const fileName = info.salida ? info.salida.split(/[\\/]/).pop() : "";
+        if (FileNameEl && info.salida) FileNameEl.textContent = fileName;
+        if (CollisionMsg) {
+            const nameEsc = escapeHtml(fileName);
+            CollisionMsg.innerHTML = t("modal.collision.exists", { name: nameEsc });
+        }
         const ext = info.salida ? "." + info.salida.split('.').pop() : "";
         if (RenameBtn) {
             if (info.alternativo) {
-                if (NewNameEl) NewNameEl.textContent = info.alternativo + ext;
+                const newFull = info.alternativo + ext;
+                if (NewNameEl) NewNameEl.textContent = newFull;
+                // also update saveAs span via t if needed
+                const saveAsSpan = RenameBtn.querySelector('[data-i18n="modal.collision.saveAs"]');
+                if (saveAsSpan) saveAsSpan.textContent = t("modal.collision.saveAs", { name: newFull });
                 RenameBtn.disabled = false;
             } else {
                 if (NewNameEl) NewNameEl.textContent = "...";
@@ -1814,11 +1830,11 @@ function StopEncode() {
 
     const statusDiv = document.getElementById("encodingStatus");
     if (statusDiv) {
-        statusDiv.innerHTML = `${Icons.stop} Deteniendo...`;
+        statusDiv.innerHTML = `${Icons.stop} ${t("encode.stopping")}`;
         statusDiv.style.color = "var(--Warn)";
     }
 
-    AddLog("⏹️ Deteniendo proceso... puede tomar unos segundos", "warning");
+    AddLog(t("log.stoppingProcess"), "warning");
 
     const stopBtn = document.getElementById("stopBtn");
     if (stopBtn) stopBtn.disabled = true;
@@ -1835,10 +1851,10 @@ function ToggleLog() {
     if (LogBody && Chevron) {
         if (LogExpanded) {
             LogBody.classList.add("open");
-            Chevron.textContent = "▼ colapsar";
+            Chevron.textContent = t("log.collapse");
         } else {
             LogBody.classList.remove("open");
-            Chevron.textContent = "▲ expandir";
+            Chevron.textContent = t("log.expand");
         }
     }
 }
@@ -1948,7 +1964,7 @@ function SeekFromTimelineEvent(E) {
 
 function OpenCutSelector() {
     if (!CurrentVideoPath) {
-        AddLog("Carga un video primero", "error");
+        AddLog(t("log.errorLoadVideoFirst"), "error");
         return;
     }
     const ExistingStart = document.getElementById("cutStart")?.value;
@@ -1979,7 +1995,7 @@ function OpenCutSelector() {
     UpdateTimelineVisuals();
     UpdateMarkerVisuals();
     const PlayerPlayBtn = document.getElementById("playerPlayBtn");
-    if (PlayerPlayBtn) PlayerPlayBtn.innerHTML = PreviewVideo.paused ? `${Icons.play} Play` : `${Icons.pause} Pausa`;
+    if (PlayerPlayBtn) PlayerPlayBtn.innerHTML = PreviewVideo.paused ? `${Icons.play} ${t("cut.play")}` : `${Icons.pause} ${t("cut.pause")}`;
 }
 
 function CloseCutSelector() {
@@ -1993,7 +2009,7 @@ function validarCutInput(input) {
     const val = (input.value || "").trim();
     if (!val || val === "00:00:00") return true;
     if (!/^\d{1,2}:\d{2}:\d{2}([.,]\d+)?$/.test(val)) {
-        AddLog(`❌ Formato inválido "${val}" (usá HH:MM:SS)`, "error");
+        AddLog(t("log.errorInvalidFormat", { value: val }), "error");
         input.value = "00:00:00";
         return false;
     }
@@ -2035,7 +2051,7 @@ function AddToQueue(filePath) {
     if (!filePath) return;
 
     if (FileQueue.some(f => f.path === filePath)) {
-        AddLog(`⚠️ ${filePath.split(/[\\/]/).pop()} ya está en la cola`, "warning");
+        AddLog(t("log.alreadyInQueue", { name: filePath.split(/[\\/]/).pop() }), "warning");
         return;
     }
 
@@ -2047,7 +2063,7 @@ function AddToQueue(filePath) {
         ProbeQueueItemAudio(FileQueue[FileQueue.length - 1]);
         RenderQueueList();
     }
-    AddLog(`📋 Añadido a cola: ${FileQueue[FileQueue.length-1].name}`, "info");
+    AddLog(t("log.addedToQueue", { name: FileQueue[FileQueue.length-1].name }), "info");
 }
 
 function ProbeQueueItemAudio(item) {
@@ -2089,7 +2105,7 @@ function RemoveFromQueue(index) {
         if (CurrentQueueSelectedIndex > index) CurrentQueueSelectedIndex--;
         RenderQueueList();
     }
-    AddLog("🗑️ Removido de cola", "info");
+    AddLog(t("log.removedFromQueue"), "info");
 }
 
 function ClearCurrentVideo() {
@@ -2107,7 +2123,7 @@ function ClearCurrentVideo() {
     });
 
     const audioContainer = document.getElementById("audioTracksContainer");
-    if (audioContainer) audioContainer.innerHTML = '<div class="AudioEmpty">Selecciona un video</div>';
+    if (audioContainer) audioContainer.innerHTML = `<div class="AudioEmpty">${t("audio.emptyNoSelection")}</div>`;
     const audioBadge = document.getElementById("audioPreviewStatus");
     if (audioBadge) audioBadge.style.display = "none";
 
@@ -2135,15 +2151,14 @@ function RenderQueueList() {
     if (FileQueue.length === 0) {
         container.innerHTML = `
             <div style="padding: 20px; text-align: center; color: var(--Text3);">
-                ${Icons.box} Sin archivos en cola<br>
-                Haz click en "Seleccionar Videos" para agregar videos
+                ${Icons.box} ${t("queue.emptyLong")}
             </div>
         `;
         return;
     }
 
     container.innerHTML = FileQueue.map((item, idx) => {
-        const CutBadge = `<span style="font-size:9px;color:var(--Accent);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.scissors} ${item.cut_start || '00:00:00'} → ${item.cut_end || 'fin'}</span>`;
+        const CutBadge = `<span style="font-size:9px;color:var(--Accent);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.scissors} ${item.cut_start || '00:00:00'} → ${item.cut_end || t("cut.endFallback")}</span>`;
         let AudioBadge;
         if (Array.isArray(item.audio_tracks)) {
             if (item.audio_tracks.length > 0) {
@@ -2157,7 +2172,7 @@ function RenderQueueList() {
                 });
                 AudioBadge = `<span style="font-size:9px;color:var(--Warn);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio} ${parts.join(', ')}</span>`;
             } else {
-                AudioBadge = `<span style="font-size:9px;color:var(--Text3);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio} Sin audio</span>`;
+                AudioBadge = `<span style="font-size:9px;color:var(--Text3);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio} ${t("audio.noAudioBadge")}</span>`;
             }
         } else {
             AudioBadge = `<span style="font-size:9px;color:var(--Text3);display:inline-flex;align-items:center;gap:4px;font-family:monospace">${Icons.audio}</span>`;
@@ -2171,7 +2186,7 @@ function RenderQueueList() {
                         ${AudioBadge}
                     </div>
                 </div>
-                <button class="QueueItemRemove" data-index="${idx}" title="Quitar de la cola">${Icons.close}</button>
+                <button class="QueueItemRemove" data-index="${idx}" title="${t("queue.removeTitle")}">${Icons.close}</button>
             </div>
         `;
     }).join('');
@@ -2182,7 +2197,7 @@ function SelectVideoFromQueue(index) {
     if (!item) return;
 
     CurrentQueueSelectedIndex = index;
-    AddLog(`🎬 Seleccionado: ${item.name}`, "info");
+    AddLog(t("log.selected", { name: item.name }), "info");
 
     LoadVideoInfo(item.path);
     RestoreCutStateFromItem(item);
@@ -2264,12 +2279,12 @@ function RestoreCutStateFromItem(Item) {
 async function ProcessQueue() {
     CloseCutSelector();
     if (FileQueue.length === 0) {
-        AddLog("❌ No hay archivos en la cola", "error");
+        AddLog(t("log.errorNoFilesInQueue"), "error");
         return;
     }
 
     if (QueueProcessing) {
-        AddLog("⚠️ Ya hay una cola en proceso", "warning");
+        AddLog(t("log.warnQueueProcessing"), "warning");
         return;
     }
 
@@ -2312,10 +2327,10 @@ async function ProcessQueue() {
         try {
             const col = await invoke("verificar_nombre_salida", { params: paramsChequeo });
             if (col && col.existe) {
-                AddLog(`⚠️ "${col.salida.split(/[\\/]/).pop()}" ya existe`, "warning");
+                AddLog(t("log.warnFileExists", { name: col.salida.split(/[\\/]/).pop() }), "warning");
                 const decision = await preguntarColision(col);
                 if (decision === "cancelar") {
-                    AddLog("❌ Cola cancelada: se detectaron archivos duplicados", "warning");
+                    AddLog(t("log.queueCancelledDuplicate"), "warning");
                     return;
                 }
                 if (decision === "renombrar" && col.alternativo) {
@@ -2358,7 +2373,7 @@ async function ProcessQueue() {
         base_params: baseParams
     });
     if (!queueStarted) {
-        AddLog("❌ No se pudo iniciar la cola", "error");
+        AddLog(t("log.errorStartingQueue"), "error");
         return;
     }
 
@@ -2381,7 +2396,7 @@ function RenderHistory(history, totalSavedMB) {
     const stats = document.getElementById("historyStats");
 
     if (stats) {
-        stats.textContent = `Ahorro: ${totalSavedMB.toFixed(1)} MB`;
+        stats.textContent = t("history.savings", { value: totalSavedMB.toFixed(1) });
     }
 
     if (!container) return;
@@ -2389,8 +2404,7 @@ function RenderHistory(history, totalSavedMB) {
     if (!history || history.length === 0) {
         container.innerHTML = `
             <div style="padding: 20px; text-align: center; color: var(--Text3);">
-                ${Icons.clock} Sin historial aún<br>
-                Comprime un video para ver estadísticas
+                ${Icons.clock} ${t("history.emptyDetail")}
             </div>
         `;
         return;
@@ -2402,7 +2416,7 @@ function RenderHistory(history, totalSavedMB) {
             <div class="HistoryItemName">${item.input} → ${item.output}</div>
             <div class="HistoryItemDetails">
                 <span>${Icons.box} ${parseFloat(item.original_mb).toFixed(1)} MB → ${parseFloat(item.output_mb).toFixed(1)} MB</span>
-                <span class="HistorySaved">${Icons.save} Ahorro: ${parseFloat(item.saved_mb).toFixed(1)} MB (${Math.round((1-item.ratio)*100)}%)</span>
+                <span class="HistorySaved">${Icons.save} ${t("history.savings", { value: parseFloat(item.saved_mb).toFixed(1) })} (${Math.round((1-item.ratio)*100)}%)</span>
                 <span>${Icons.film} ${item.codec}</span>
             </div>
         </div>
@@ -2425,7 +2439,7 @@ function ToggleHistory() {
 // ========== SELECTOR DE ARCHIVOS ==========
 async function SelectMultipleFiles() {
     try {
-        AddLog("📂 Abriendo selector de archivos...", "info");
+        AddLog(t("log.selectingFiles"), "info");
         const filePath = await open({
             multiple: true,
             filters: [{ name: "Videos", extensions: ["mp4", "mkv", "mov", "avi", "webm", "m4v"] }],
@@ -2435,15 +2449,24 @@ async function SelectMultipleFiles() {
                 if (fp) AddToQueue(fp);
             }
         } else {
-            AddLog("❌ No se seleccionó ningún archivo", "info");
+            AddLog(t("log.noFileSelected"), "info");
         }
     } catch (error) {
-        AddLog(`❌ Error: ${error.message}`, "error");
+        AddLog(t("log.errorGeneric", { error: error.message }), "error");
     }
 }
 
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', () => {
+    applyI18n(document);
+    const _ppBtn = document.getElementById("playerPlayBtn");
+    if (_ppBtn) _ppBtn.innerHTML = `${Icons.play} ${t("cut.play")}`;
+    const _histStats = document.getElementById("historyStats");
+    if (_histStats && !_histStats.textContent.trim()) _histStats.textContent = t("history.savings", { value: "0" });
+    const _qLabel = document.getElementById("qualityLabel");
+    if (_qLabel && !_qLabel.textContent.trim()) UpdateCrfSlider(SelectedCodec);
+    const _logChevron = document.getElementById("logChevron");
+    if (_logChevron) _logChevron.textContent = t("log.expand");
     console.log("Inicializando SwissVideo...");
 
     // Eventos de progreso desde Rust
@@ -2626,11 +2649,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     return ext && videoExts.includes(ext);
                 });
                 if (videos.length === 0) {
-                    AddLog("❌ No se detectaron archivos de video válidos", "error");
+                    AddLog(t("log.noValidVideos"), "error");
                     return;
                 }
                 for (const vp of videos) AddToQueue(vp);
-                AddLog(`📂 ${videos.length} video(s) recibidos por arrastrar y soltar`, "success");
+                AddLog(t("log.videosReceived", { count: videos.length }), "success");
             }
         }
     });
@@ -2662,7 +2685,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const FolderPath = await open({ directory: true });
             if (FolderPath && destPath) {
                 destPath.value = FolderPath;
-                AddLog(`Destino: ${FolderPath}`, "success");
+                AddLog(t("log.destSet", { path: FolderPath }), "success");
             }
         });
     }
@@ -2677,8 +2700,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (CutVideo) {
         CutVideo.addEventListener("timeupdate", () => { if (!IsScrubbing) UpdateTimelineVisuals(); });
-        CutVideo.addEventListener("play", () => { if (PlayerPlayBtn) PlayerPlayBtn.innerHTML = `${Icons.pause} Pausa`; });
-        CutVideo.addEventListener("pause", () => { if (PlayerPlayBtn) PlayerPlayBtn.innerHTML = `${Icons.play} Play`; });
+        CutVideo.addEventListener("play", () => { if (PlayerPlayBtn) PlayerPlayBtn.innerHTML = `${Icons.pause} ${t("cut.pause")}`; });
+        CutVideo.addEventListener("pause", () => { if (PlayerPlayBtn) PlayerPlayBtn.innerHTML = `${Icons.play} ${t("cut.play")}`; });
     }
 
     if (PlayerPlayBtn) {
@@ -2702,7 +2725,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 PlayerMarkedStart = cv.currentTime;
                 if (PlayerMarkedEnd !== null && PlayerMarkedStart >= PlayerMarkedEnd) PlayerMarkedEnd = null;
                 UpdateMarkerVisuals();
-                AddLog(`Inicio marcado: ${SecondsToHms(PlayerMarkedStart)}`, "info");
+                AddLog(t("log.startMarked", { time: SecondsToHms(PlayerMarkedStart) }), "info");
             }
         });
     }
@@ -2712,12 +2735,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const cv = document.getElementById("previewVideo");
             if (cv) {
                 if (PlayerMarkedStart !== null && cv.currentTime <= PlayerMarkedStart) {
-                    AddLog("El fin debe ser posterior al inicio", "error");
+                    AddLog(t("log.errorEndAfterStart"), "error");
                     return;
                 }
                 PlayerMarkedEnd = cv.currentTime;
                 UpdateMarkerVisuals();
-                AddLog(`Fin marcado: ${SecondsToHms(PlayerMarkedEnd)}`, "info");
+                AddLog(t("log.endMarked", { time: SecondsToHms(PlayerMarkedEnd) }), "info");
             }
         });
     }
@@ -2731,7 +2754,7 @@ document.addEventListener('DOMContentLoaded', () => {
             SaveCutToCurrentQueueItem();
             CloseCutSelector();
             UpdateEstimatedTotalFrames();
-            AddLog(`Corte aplicado: ${SecondsToHms(PlayerMarkedStart ?? 0)} → ${SecondsToHms(PlayerMarkedEnd ?? 0)}`, "success");
+            AddLog(t("log.cutApplied", { start: SecondsToHms(PlayerMarkedStart ?? 0), end: SecondsToHms(PlayerMarkedEnd ?? 0) }), "success");
         });
     }
 
@@ -2775,7 +2798,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (muteBtn) {
                     muteBtn.classList.toggle('on', val === 0);
                     muteBtn.innerHTML = val === 0 ? Icons.mute : Icons.volume;
-                    muteBtn.title = val === 0 ? 'Restaurar volumen' : 'Silenciar';
+                    muteBtn.title = val === 0 ? t("audio.unmuteTitle") : t("audio.muteTitle");
                 }
                 SaveVolumeToCurrentQueueItem(idx, val);
             }
@@ -2823,5 +2846,5 @@ document.addEventListener('DOMContentLoaded', () => {
     const logDot = document.getElementById("logDot");
     if (logDot) logDot.classList.remove("idle");
     SendMessage("check_ffmpeg");
-    AddLog("SwissVideo listo", "info");
+    AddLog(t("log.ready"), "info");
 });
