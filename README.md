@@ -7,7 +7,9 @@
 
 Professional desktop video compressor. Lightweight, no-nonsense alternative to Handbrake, focused on fast hardware-accelerated transcoding and fine-grained control over codecs, trimming and audio. Built with **Tauri v2 + Rust + FFmpeg** — small binary, low RAM, no Electron overhead (V2 is a port of the Electron-based V1).
 
-> **Status:** works on Windows 10/11. Requires external FFmpeg (see [Prerequisites](#prerequisites)).
+> **Status:** Windows 10/11 only. Requires external FFmpeg (see [Prerequisites](#prerequisites)).
+
+> **⚠️ Not Linux-ready:** the app is developed, tested and built **only for Windows**. Linux is not supported — it may compile, but WebKit/GPU/GStreamer rendering and the FFmpeg pipelines are unreliable there (window opens blank, EGL/`autoaudiosink` errors). Do not file Linux issues; build a native port only if you know what you're doing.
 
 > **⚠️ Transparency — heavy AI assistance:** this project was built with **heavy LLM assistance** for architecture, Rust/JS implementation and debugging. The author (1st-semester Systems Engineering student) understands the high-level purpose of each module, but **large parts of the codebase are not yet fully understood line-by-line by the author**. It is published honestly as a learning project. **Current plan:** deeply study each part (FFmpeg pipeline, Tauri IPC, state handling) and **progressively rewrite/refactor all code with full personal understanding**. Issues and PRs pointing out confusing or improvable code are welcome — they help that learning.
 
@@ -50,12 +52,11 @@ Professional desktop video compressor. Lightweight, no-nonsense alternative to H
 - **Node.js** 18+ and **Rust** stable (cargo)
 - **FFmpeg + FFprobe** reachable via one of these (search order in `src-tauri/src/lib.rs:find_tool`):
   1. On `PATH` (`ffmpeg --help` should work)
-  2. Windows: `C:\ffmpeg\bin\ffmpeg.exe` / `ffprobe.exe`
-  3. Windows: `C:\Program Files\ffmpeg\bin\`
-  4. Windows: `C:\Program Files (x86)\ffmpeg\bin\`
-  5. Linux: `/usr/bin/ffmpeg` / `/usr/local/bin/ffmpeg`
+  2. `C:\ffmpeg\bin\ffmpeg.exe` / `ffprobe.exe`
+  3. `C:\Program Files\ffmpeg\bin\`
+  4. `C:\Program Files (x86)\ffmpeg\bin\`
 
-> Verify with `ffmpeg -encoders` (busca `nvenc`/`amf`/`qsv`) y `ffprobe -version`. Windows: `choco install ffmpeg` / `scoop install ffmpeg`. Linux: `sudo pacman -S ffmpeg` (Arch) / `sudo apt install ffmpeg` (Debian).
+> Verify with `ffmpeg -encoders` (busca `nvenc`/`amf`/`qsv`) y `ffprobe -version`. Windows: `choco install ffmpeg` / `scoop install ffmpeg`.
 
 ## Installation & Usage
 
@@ -84,27 +85,19 @@ cargo test
 
 Expected `cargo test` (17 tests): `atomic_write_json`, `ProgressThrottle`, FFmpeg progress parsing, per-track volume and flexible `audio_volumes` deserialization (map or array).
 
-### Linux (build nativo, sin instalador)
+### Linux — no soportado
 
-No hay instalador para Linux: compila el binario nativo, que usa el `webkit2gtk-4.1` de tu sistema (requiere Node 18+, Rust, FFmpeg/FFprobe en `PATH`).
+La app está pensada solo para Windows. En Linux **no hay instalador** y no se garantiza que funcione: el render WebKit/GPU y las pipelines de FFmpeg fallan de forma no determinista (ventana en blanco, `EGL_BAD_PARAMETER`, `GStreamer element autoaudiosink not found`, `WebKitWebProcess` se cae). Si quieres experimentar por tu cuenta (sin soporte):
 
 ```bash
-# Arch / CachyOS
-sudo pacman -S base-devel rust webkit2gtk-4.1 gtk3 nodejs npm ffmpeg
+# Arch / CachyOS — deps
+sudo pacman -S base-devel rust webkit2gtk-4.1 gtk3 nodejs npm ffmpeg gst-plugins-base gst-plugins-good
 
-# Debian / Ubuntu
-sudo apt install build-essential rustc cargo libwebkit2gtk-4.1-dev libgtk-3-dev nodejs npm ffmpeg
-
-# Build
-git clone https://github.com/Mignite/SwissVideo.git
-cd SwissVideo
+# Build con el frontend embebido (NO cargo build a secas: ese busca el dev server)
 npm install
-npm run tauri build   # binario en src-tauri/target/release/swissvideo-v2
-# ejecutar:
+npm run tauri build
 ./src-tauri/target/release/swissvideo-v2
 ```
-
-> Si solo quieres la app, no el paquete: `cargo build --release` y corre `src-tauri/target/release/swissvideo-v2`. Compila el binario contra tu webkit del sistema, así que no arrastra una copia embebida.
 
 ## File Structure
 
