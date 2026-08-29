@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicedayzhu/tauri-v2-schemas/main/tauri.conf.schema.json",
+  "$schema": "https://schema.tauri.app/config/2",
   "productName": "SwissVideo V2",
   "version": "2.0.0",
   "identifier": "com.swissvideo.app",
@@ -20,16 +20,17 @@
       }
     ],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost blob: data:; media-src 'self' asset: http://asset.localhost blob: data:; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost",
+      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost blob: data:; media-src 'self' asset: http://asset.localhost blob: data:; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1420",
       "assetProtocol": {
         "enable": true,
-        "scope": ["**"]
+        "scope": ["$HOME/**", "$APPCACHE/**", "$APPDATA/**", "$DOCUMENT/**", "$DESKTOP/**", "$VIDEO/**", "$DOWNLOAD/**", "$PICTURE/**", "$RESOURCE/**"]
       }
     }
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis"],
     "icon": ["icons/icon.ico"]
   }
 }

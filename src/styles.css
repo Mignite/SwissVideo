@@ -49,7 +49,7 @@ body {
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--BorderStrong); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: var(--BorderStrong); border-radius: 0; }
 ::-webkit-scrollbar-thumb:hover { background: var(--Text5); }
 
 .App {
@@ -90,7 +90,7 @@ body {
 /* ===== TARJETAS ===== */
 .Card {
   background: var(--Panel);
-  border-radius: 10px;
+  border-radius: 0;
   padding: 14px;
   flex-shrink: 0;
 }
@@ -111,7 +111,7 @@ body {
   color: var(--Text3);
   background: transparent;
   border: 1px solid var(--BorderStrong);
-  border-radius: var(--RadiusSm);
+  border-radius: 0;
   padding: 4px 8px;
   cursor: pointer;
   transition: border-color 0.2s, color 0.2s;
@@ -121,7 +121,7 @@ body {
 /* ===== DROPZONE ===== */
 .Dropzone {
   border: 1px dashed var(--BorderStrong);
-  border-radius: 10px;
+  border-radius: 0;
   padding: 22px 16px;
   text-align: center;
   cursor: pointer;
@@ -141,7 +141,7 @@ body {
 .QueueEmpty { text-align: center; color: var(--Text5); font-size: 12px; padding: 16px 4px; }
 .QueueItem {
   display: flex; align-items: center; gap: 8px;
-  padding: 8px 10px; border-radius: var(--Radius);
+  padding: 8px 10px; border-radius: 0;
   border-left: 3px solid transparent;
   margin-top: 4px;
   cursor: pointer;
@@ -160,7 +160,7 @@ body {
   background: transparent;
   color: var(--Text4);
   font-size: 12px;
-  border-radius: var(--RadiusSm);
+  border-radius: 0;
   cursor: pointer;
   opacity: 0.55;
   transition: opacity 0.15s, background 0.15s, color 0.15s;
@@ -175,7 +175,7 @@ body {
 .QueueProgress { font-size: 11px; color: var(--Text3); padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--Border); }
 
 /* ===== HISTORIAL (acordeón) ===== */
-.Accordion { background: var(--Panel2); border-radius: var(--Radius); overflow: hidden; flex-shrink: 0; }
+.Accordion { background: var(--Panel2); border-radius: 0; overflow: hidden; flex-shrink: 0; }
 .AccordionHeader {
   width: 100%; display: flex; justify-content: space-between; align-items: center;
   background: transparent; border: none;
@@ -196,7 +196,7 @@ body {
 .PresetChip {
   background: transparent;
   border: 1px dashed var(--BorderStrong);
-  border-radius: 20px;
+  border-radius: 0;
   padding: 6px 14px;
   font-size: 11px;
   color: var(--Text3);
@@ -211,11 +211,11 @@ body {
 .CodecSeg {
   display: flex; gap: 3px; align-items: stretch;
   background: var(--Panel2); border: 1px solid var(--BorderStrong);
-  border-radius: 8px; padding: 3px;
+  border-radius: 0; padding: 3px;
 }
 .CodecSegBtn {
   flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
-  border: none; background: transparent; border-radius: 5px;
+  border: none; background: transparent; border-radius: 0;
   padding: 6px 4px; font-size: 12px; font-weight: 600; font-family: var(--Mono);
   color: var(--Text3); cursor: pointer; transition: background 0.15s, color 0.15s;
 }
@@ -229,13 +229,13 @@ body {
 .OthersWrap .CodecSegBtn { width: 100%; }
 .OthersMenu {
   position: absolute; top: calc(100% + 6px); right: 0; min-width: 170px; max-height: 260px; overflow-y: auto; z-index: 40;
-  background: #20202a; border: 1px solid var(--BorderStrong); border-radius: 10px;
+  background: #20202a; border: 1px solid var(--BorderStrong); border-radius: 0;
   padding: 6px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5); display: none;
 }
 .OthersWrap.open .OthersMenu { display: block; }
 .OthersSearchWrap { position: sticky; top: 0; background: #20202a; margin: -6px -6px 0; padding: 6px; z-index: 1; }
 .OthersSearch {
-  width: 100%; background: var(--Panel2); border: 1px solid var(--BorderStrong); border-radius: 6px;
+  width: 100%; background: var(--Panel2); border: 1px solid var(--BorderStrong); border-radius: 0;
   padding: 6px 8px; font-size: 12px; color: var(--Text); font-family: var(--Mono);
 }
 .OthersSearch::placeholder { color: var(--Text4); }
@@ -244,7 +244,7 @@ body {
 .OthersEmpty { font-size: 12px; color: var(--Text4); text-align: center; padding: 10px 8px; display: none; }
 .OthersItem {
   width: 100%; display: flex; align-items: center; gap: 8px;
-  background: none; border: none; border-radius: 6px; padding: 7px 8px;
+  background: none; border: none; border-radius: 0; padding: 7px 8px;
   font-size: 12.5px; color: var(--Text2); cursor: pointer; text-align: left;
 }
 .OthersItem:hover { background: rgba(255, 255, 255, 0.05); color: var(--Text); }
@@ -255,7 +255,7 @@ body {
 .Cbtn {
   position: relative;
   padding: 7px 16px;
-  border-radius: var(--Radius);
+  border-radius: 0;
   border: 1px solid var(--BorderStrong);
   background: var(--Panel2);
   color: var(--Text3);
@@ -278,7 +278,7 @@ body {
 .Pval { font-family: monospace; font-size: 12px; color: var(--Text2); min-width: 40px; text-align: right; flex-shrink: 0; }
 input[type=range] {
   -webkit-appearance: none; flex: 1; height: 3px;
-  border-radius: 3px; background: var(--BorderStrong); outline: none;
+  border-radius: 0; background: var(--BorderStrong); outline: none;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; width: 13px; height: 13px;
@@ -287,7 +287,7 @@ input[type=range]::-webkit-slider-thumb {
 }
 select, .Sel {
   background: var(--Panel2); border: 1px solid var(--BorderStrong);
-  border-radius: var(--Radius); color: var(--Text);
+  border-radius: 0; color: var(--Text);
   padding: 7px 10px; font-size: 12px; cursor: pointer;
   transition: border-color 0.2s;
 }
@@ -295,11 +295,13 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 
 /* ===== AUDIO ===== */
 .TrackRow { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--Text2); padding: 6px 0; flex-wrap: wrap; }
-.TrackRow span { flex: 1; min-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.TrackRow span:not(.AudioCheck) { flex: 1; min-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.TrackRow .AudioCheck{flex:0 0 18px !important;min-width:18px !important;max-width:18px !important}
 /* Elegant tick — reemplaza el checkbox nativo que esquivó el CSS */
-.AudioCheckWrap{position:relative;display:inline-flex;flex:0 0 auto;cursor:pointer}
+.AudioEmpty { color: var(--Text3); font-size: 12px; padding: 8px 10px; }
+.AudioCheckWrap{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:0 0 18px;width:18px;height:18px;cursor:pointer}
 .AudioCheckWrap input{position:absolute;opacity:0;width:0;height:0}
-.AudioCheck{width:18px;height:18px;border-radius:0;border:1.5px solid var(--BorderStrong);background:var(--Panel2);display:inline-flex;align-items:center;justify-content:center;color:transparent;transition:background .18s,border-color .18s,box-shadow .18s,color .18s,transform .12s}
+.AudioCheck{width:18px;height:18px;min-width:18px;min-height:18px;max-width:18px;max-height:18px;flex:0 0 18px;aspect-ratio:1;border-radius: 0;border:1.5px solid var(--BorderStrong);background:var(--Panel2);display:inline-flex;align-items:center;justify-content:center;color:transparent;transition:background .18s,border-color .18s,box-shadow .18s,color .18s,transform .12s}
 .AudioCheck svg{width:11px;height:11px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.7);transition:opacity .14s,transform .14s}
 .AudioCheckWrap input:checked + .AudioCheck{background:var(--Accent);border-color:var(--Accent);color:#fff;box-shadow:0 0 0 3px var(--AccentDim)}
 .AudioCheckWrap input:checked + .AudioCheck svg{opacity:1;transform:scale(1)}
@@ -311,10 +313,10 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .VolumeBadge { min-width: 38px; text-align: right; font-family: var(--Mono); font-size: 11px; color: var(--Text2); flex: 0 0 auto; }
 .VolumeBadge.muted { color: var(--Text4); }
 .VolumeBadge.boosted { color: var(--Accent); font-weight: 600; }
-.VolumeMuteBtn { flex: 0 0 auto; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: var(--RadiusSm); border: 1px solid var(--BorderStrong); background: var(--Panel2); color: var(--Text3); cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
+.VolumeMuteBtn { flex: 0 0 auto; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: 0; border: 1px solid var(--BorderStrong); background: var(--Panel2); color: var(--Text3); cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
 .VolumeMuteBtn:hover { border-color: var(--Accent); color: var(--Text); }
 .VolumeMuteBtn.on { border-color: var(--Accent); color: var(--Accent); background: var(--AccentDim); }
-.AudioPreviewBadge { display:inline-flex; align-items:center; gap:6px; font-size:10px; font-weight:600; letter-spacing:0.2px; text-transform:none; padding:3px 8px; border-radius:20px; border:1px solid var(--BorderStrong); background: var(--Panel2); color: var(--Text3); max-width: 220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.AudioPreviewBadge { display:inline-flex; align-items:center; gap:6px; font-size:10px; font-weight:600; letter-spacing:0.2px; text-transform:none; padding:3px 8px; border-radius: 0; border:1px solid var(--BorderStrong); background: var(--Panel2); color: var(--Text3); max-width: 220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .AudioPreviewBadge.global { border-color: var(--AccentBlue); color: var(--AccentBlue); background: rgba(78,168,232,0.12); }
 .AudioPreviewBadge.mix { border-color: var(--AccentGreen); color: var(--AccentGreen); background: rgba(126,217,87,0.12); }
 .AudioPreviewBadge.muted { border-color: var(--BorderStrong); color: var(--Text4); }
@@ -327,7 +329,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 /* ===== CORTE ===== */
 .CutModes { display: flex; gap: 8px; margin-bottom: 10px; }
 .CutMode {
-  flex: 1; padding: 7px 10px; border-radius: var(--Radius);
+  flex: 1; padding: 7px 10px; border-radius: 0;
   border: 1px solid var(--BorderStrong);
   background: var(--Panel2); color: var(--Text3);
   font-size: 12px; cursor: pointer;
@@ -336,7 +338,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .CutMode.on { border-color: var(--Accent); color: var(--Accent); }
 .RateCtrl { display: flex; gap: 4px; }
 .RateOpt {
-  padding: 2px 10px; border-radius: var(--RadiusSm); font-size: 11px; font-weight: 600;
+  padding: 2px 10px; border-radius: 0; font-size: 11px; font-weight: 600;
   border: 1px solid var(--BorderStrong); background: var(--Panel2); color: var(--Text3);
   cursor: pointer; user-select: none;
 }
@@ -346,7 +348,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .TimeInput {
   width: 100px; text-align: center; font-family: monospace;
   background: var(--Panel2); border: 1px solid var(--BorderStrong);
-  border-radius: var(--Radius); padding: 7px 6px;
+  border-radius: 0; padding: 7px 6px;
   color: var(--Text); font-size: 12px;
 }
 
@@ -356,12 +358,12 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
   font-family: monospace; font-size: 10px;
   color: var(--AccentBlue);
   background: var(--Panel2); border: 1px solid var(--BorderStrong);
-  border-radius: 5px; padding: 3px 7px; cursor: pointer;
+  border-radius: 0; padding: 3px 7px; cursor: pointer;
 }
 .Tpl:hover { border-color: var(--AccentBlue); }
 .NameField {
   width: 100%; background: var(--Panel2);
-  border: 1px solid var(--BorderStrong); border-radius: var(--Radius);
+  border: 1px solid var(--BorderStrong); border-radius: 0;
   padding: 8px 10px; color: var(--Text);
   font-family: monospace; font-size: 12px;
 }
@@ -372,7 +374,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .DirRow { display: flex; gap: 8px; }
 .DirInp {
   flex: 1; min-width: 0; background: var(--Panel2);
-  border: 1px solid var(--BorderStrong); border-radius: var(--Radius);
+  border: 1px solid var(--BorderStrong); border-radius: 0;
   padding: 8px 10px; color: var(--Text); font-size: 12px;
 }
 .CheckRow { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--Text3); }
@@ -383,7 +385,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .InfoLabel { color: var(--Text4); }
 .InfoValue { color: var(--Text2); font-family: monospace; }
 .PreviewBox {
-  background: #000; border-radius: 10px;
+  background: #000; border-radius: 0;
   aspect-ratio: 16 / 9;
   display: flex; align-items: center; justify-content: center;
   position: relative; overflow: hidden; flex-shrink: 0;
@@ -401,7 +403,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .EncodeContainer { margin-top: auto; flex-shrink: 0; }
 .EncodeBtn {
   width: 100%; padding: 12px;
-  border-radius: 10px;
+  border-radius: 0;
   border: 1px solid var(--Accent);
   background: rgba(232, 93, 78, 0.12);
   color: var(--Accent);
@@ -411,7 +413,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .EncodeBtn:hover { background: rgba(232, 93, 78, 0.2); }
 .EncodeBtn:disabled { opacity: 0.4; cursor: default; }
 .StopBtn {
-  width: 100%; padding: 10px; border-radius: 10px;
+  width: 100%; padding: 10px; border-radius: 0;
   border: 1px solid var(--BorderStrong); background: transparent;
   color: var(--Text3); font-size: 12px; cursor: pointer; margin-top: 8px;
 }
@@ -420,8 +422,8 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 /* ===== BARRA INFERIOR ===== */
 .BottomBar { flex-shrink: 0; padding: 0 14px 10px; }
 .EncodingStatus { font-size: 11px; color: var(--Text4); text-align: center; margin-bottom: 6px; }
-.ProgBar { width: 100%; height: 5px; background: var(--Panel2); border-radius: 3px; overflow: hidden; }
-.ProgFill { height: 100%; background: var(--Accent); border-radius: 3px; transition: width 0.2s ease; }
+.ProgBar { width: 100%; height: 5px; background: var(--Panel2); border-radius: 0; overflow: hidden; }
+.ProgFill { height: 100%; background: var(--Accent); border-radius: 0; transition: width 0.2s ease; }
 .StatsRow { display: flex; justify-content: center; gap: 18px; font-size: 11px; color: var(--Text4); margin-top: 6px; flex-wrap: wrap; }
 .StatsRow span span { color: var(--Text2); font-family: monospace; }
 
@@ -429,7 +431,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
   flex-shrink: 0;
   margin: 0 14px 14px;
   background: var(--Panel);
-  border-radius: var(--Radius);
+  border-radius: 0;
   overflow: hidden;
 }
 .LogHd { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; }
@@ -455,7 +457,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .ModalOverlay.open, .ModalOverlay[style*="flex"] { display: flex; }
 .Modal {
   background: var(--Panel);
-  border-radius: var(--RadiusLg);
+  border-radius: 0;
   width: 480px;
   max-width: 92vw;
   max-height: 85vh;
@@ -478,37 +480,37 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 .CutInlineBox {
   display: flex; flex-direction: column; gap: 12px;
   background: var(--Panel); border: 1px solid var(--BorderStrong);
-  border-radius: 10px; padding: 14px; margin-top: 12px; flex-shrink: 0;
+  border-radius: 0; padding: 14px; margin-top: 12px; flex-shrink: 0;
 }
 .CutInlineHd {
   display: flex; justify-content: space-between; align-items: center;
   font-size: 12px; font-weight: 600; color: var(--Text);
   padding-bottom: 6px; border-bottom: 1px solid var(--Border);
 }
-.PlayerVideoWrap { background: #000; border-radius: var(--Radius); aspect-ratio: 16/9; overflow: hidden; }
+.PlayerVideoWrap { background: #000; border-radius: 0; aspect-ratio: 16/9; overflow: hidden; }
 .PlayerVideoWrap video { width: 100%; height: 100%; }
-.PlayerTimelineWrap { position: relative; height: 44px; background: var(--Panel2); border-radius: var(--RadiusSm); cursor: pointer; }
+.PlayerTimelineWrap { position: relative; height: 44px; background: var(--Panel2); border-radius: 0; cursor: pointer; }
 .playerTimelineTrack { position: relative; width: 100%; height: 100%; }
-.playerFill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--Accent); opacity: 0.3; border-radius: var(--RadiusSm); pointer-events: none; }
+.playerFill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--Accent); opacity: 0.3; border-radius: 0; pointer-events: none; }
 .playerThumb { position: absolute; top: 50%; left: 0%; width: 12px; height: 12px; background: var(--Accent); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; box-shadow: 0 0 4px rgba(0,0,0,0.5); }
 .playerSelection { position: absolute; top: 0; height: 100%; background: var(--Accent); opacity: 0.15; pointer-events: none; display: none; z-index: 2; }
 .marker { position: absolute; top: 0; height: 100%; width: 3px; background: var(--Accent); pointer-events: none; display: none; z-index: 3; }
 .markerStart { background: #4caf50; }
 .markerEnd { background: #f44336; }
-.markerLabel { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--Text3); white-space: nowrap; padding: 1px 4px; background: var(--Panel2); border: 1px solid var(--Border); border-radius: 3px; margin-bottom: 2px; }
+.markerLabel { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--Text3); white-space: nowrap; padding: 1px 4px; background: var(--Panel2); border: 1px solid var(--Border); border-radius: 0; margin-bottom: 2px; }
 .PlayerControls { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--Text3); }
-.PlayerBtn { background: var(--Panel2); border: 1px solid var(--BorderStrong); border-radius: var(--Radius); padding: 8px 16px; color: var(--Text); cursor: pointer; }
+.PlayerBtn { background: var(--Panel2); border: 1px solid var(--BorderStrong); border-radius: 0; padding: 8px 16px; color: var(--Text); cursor: pointer; }
 .PlayerBtn:hover { border-color: var(--Accent); }
 .PlayerMarkRow { display: flex; gap: 10px; margin-top: 2px; }
 .PlayerMarkBtn {
   flex: 1; display: flex; justify-content: space-between;
-  padding: 8px 10px; border-radius: var(--Radius);
+  padding: 8px 10px; border-radius: 0;
   border: 1px solid var(--BorderStrong);
   background: var(--Panel2); font-size: 11px; color: var(--Text3); cursor: pointer;
 }
 .PlayerMarkBtn:hover { border-color: var(--Accent); }
 .PlayerConfirmBtn {
-  width: 100%; padding: 10px; border-radius: var(--Radius);
+  width: 100%; padding: 10px; border-radius: 0;
   border: 1px solid var(--Accent);
   background: rgba(232, 93, 78, 0.12);
   color: var(--Accent); font-weight: 600; cursor: pointer;
@@ -516,7 +518,7 @@ select:hover, select:focus { border-color: var(--Accent); outline: none; }
 
 /* ===== BOTONES GENERALES ===== */
 button {
-  border-radius: var(--Radius);
+  border-radius: 0;
   border: 1px solid var(--BorderStrong);
   padding: 0.5em 1em;
   font-size: 0.9em;
@@ -544,7 +546,7 @@ button:hover { border-color: var(--Accent); }
 .DropOverlay p {
   background: var(--Panel);
   padding: 14px 22px;
-  border-radius: 10px;
+  border-radius: 0;
   font-size: 14px;
   font-weight: 600;
 }

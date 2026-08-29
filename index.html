@@ -28,7 +28,7 @@
       <div class="QueueHeader CardHd">
         <span>Cola de procesamiento</span>
         <label class="CheckRow" style="margin-top:0">
-          <input type="checkbox" id="batchModeCheck"> Modo lote
+          <span class="AudioCheckWrap"><input type="checkbox" id="batchModeCheck"><span class="AudioCheck"><svg viewBox="0 0 12 10"><path d="M1 5 L4.5 8.5 L11 1.5"/></svg></span></span> Modo lote
         </label>
       </div>
       <div class="QueueEmpty" id="queueList">
@@ -112,7 +112,7 @@
 
     <div class="Card">
       <div class="CardHd">Pistas de audio <span id="audioPreviewStatus" class="AudioPreviewBadge" style="display:none"></span></div>
-      <div id="audioTracksContainer"></div>
+      <div id="audioTracksContainer"><div class="AudioEmpty">Selecciona un video</div></div>
     </div>
 
     <div class="Card">
@@ -217,7 +217,7 @@
         <button id="browseDestBtn">Examinar</button>
       </div>
       <label class="CheckRow">
-        <input type="checkbox" id="sameFolderCheck"> Misma carpeta que el origen
+        <span class="AudioCheckWrap"><input type="checkbox" id="sameFolderCheck"><span class="AudioCheck"><svg viewBox="0 0 12 10"><path d="M1 5 L4.5 8.5 L11 1.5"/></svg></span></span> Misma carpeta que el origen
       </label>
     </div>
 

@@ -826,7 +826,7 @@ function UpdateAudioTracks(Info, savedTracks, savedVolumes) {
     Container.innerHTML = "";
 
     if (!Info.audio_tracks || Info.audio_tracks.length === 0) {
-        Container.innerHTML = '<div style="color: var(--Text3); padding: 8px;">No se detectaron pistas de audio</div>';
+        Container.innerHTML = '<div class="AudioEmpty">Este video no tiene pistas de audio</div>';
         const badge = document.getElementById("audioPreviewStatus");
         if (badge) badge.style.display = "none";
         return;
@@ -1634,6 +1634,7 @@ function LoadVideoInfo(FilePath) {
 }
 
 async function StartEncode() {
+    CloseCutSelector();
     const batchMode = document.getElementById("batchModeCheck")?.checked || false;
 
     if (batchMode && FileQueue.length > 0) {
@@ -2106,7 +2107,9 @@ function ClearCurrentVideo() {
     });
 
     const audioContainer = document.getElementById("audioTracksContainer");
-    if (audioContainer) audioContainer.innerHTML = "";
+    if (audioContainer) audioContainer.innerHTML = '<div class="AudioEmpty">Selecciona un video</div>';
+    const audioBadge = document.getElementById("audioPreviewStatus");
+    if (audioBadge) audioBadge.style.display = "none";
 
     const cutStart = document.getElementById("cutStart");
     const cutEnd = document.getElementById("cutEnd");
@@ -2259,6 +2262,7 @@ function RestoreCutStateFromItem(Item) {
 }
 
 async function ProcessQueue() {
+    CloseCutSelector();
     if (FileQueue.length === 0) {
         AddLog("❌ No hay archivos en la cola", "error");
         return;
