@@ -275,11 +275,14 @@ fn find_tool(name: &str) -> String {
         return bare;
     }
 
-    // Fallback: hardcoded paths
-    let candidates = vec![
+    // Fallback: hardcoded paths (Windows + Linux)
+    let mut candidates = vec![
         format!(r"C:\ffmpeg\bin\{}.exe", name),
         format!(r"C:\Program Files\ffmpeg\bin\{}.exe", name),
         format!(r"C:\Program Files (x86)\ffmpeg\bin\{}.exe", name),
+        format!("/usr/bin/{}", name),
+        format!("/usr/local/bin/{}", name),
+        format!("/opt/ffmpeg/bin/{}", name),
     ];
 
     for path in &candidates {
