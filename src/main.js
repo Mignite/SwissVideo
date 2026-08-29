@@ -10,6 +10,50 @@ setLocale(__initialLocale);
 window.t = t;
 window.applyI18n = applyI18n;
 
+function UpdateLocaleToggleUI(locale) {
+    const wrap = document.getElementById("localeToggle");
+    if (!wrap) return;
+    wrap.querySelectorAll("[data-locale]").forEach((Btn) => {
+        const isActive = Btn.dataset.locale === locale;
+        Btn.classList.toggle("on", isActive);
+        Btn.setAttribute("aria-pressed", String(isActive));
+    });
+}
+
+function SetupLocaleToggle() {
+    const wrap = document.getElementById("localeToggle");
+    if (!wrap || wrap._localeWired) return;
+    wrap._localeWired = true;
+    UpdateLocaleToggleUI(getLocale());
+    wrap.addEventListener("click", (E) => {
+        const Btn = E.target.closest("[data-locale]");
+        if (!Btn) return;
+        const next = Btn.dataset.locale;
+        if (!next || next === getLocale()) return;
+        setLocale(next);
+        applyI18n(document);
+        UpdateLocaleToggleUI(getLocale());
+        // Re-render dinámicos que usan t() fuera de data-i18n
+        try { RenderPresetsBar(); } catch {}
+        try { RenderCodecSelector(); } catch {}
+        try { RenderQueueList(); } catch {}
+        try { UpdateCrfSlider(SelectedCodec); } catch {}
+        try {
+            const st = getSelectedAudioState();
+            updateAudioPreviewBadge(st.selected, st.vols);
+        } catch {}
+        try {
+            const chevron = document.getElementById("logChevron");
+            if (chevron) chevron.textContent = LogExpanded ? t("log.collapse") : t("log.expand");
+        } catch {}
+        try {
+            const ppBtn = document.getElementById("playerPlayBtn");
+            const cv = document.getElementById("previewVideo");
+            if (ppBtn && cv) ppBtn.innerHTML = cv.paused ? `${Icons.play} ${t("cut.play")}` : `${Icons.pause} ${t("cut.pause")}`;
+        } catch {}
+    });
+}
+
 // ========== CONFIGURACIÓN GLOBAL ==========
 let CurrentVideoPath = null;
 let CurrentVideoInfo = null;
@@ -2459,6 +2503,7 @@ async function SelectMultipleFiles() {
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', () => {
     applyI18n(document);
+    SetupLocaleToggle();
     const _ppBtn = document.getElementById("playerPlayBtn");
     if (_ppBtn) _ppBtn.innerHTML = `${Icons.play} ${t("cut.play")}`;
     const _histStats = document.getElementById("historyStats");

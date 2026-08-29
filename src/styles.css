@@ -60,7 +60,55 @@ body {
   flex-direction: column;
 }
 
-/* ===== TITLEBAR ===== */
+/* ===== TITLEBAR / TOPBAR ===== */
+.TopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--Panel);
+  border-bottom: 1px solid var(--Border);
+  flex-shrink: 0;
+}
+.TopBarTitle {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--Text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.LocaleToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: var(--Panel2);
+  border: 1px solid var(--BorderStrong);
+  flex-shrink: 0;
+}
+.LocaleBtn {
+  min-width: 38px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  line-height: 1;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--Text3);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.LocaleBtn:hover { color: var(--Text); border-color: var(--BorderStrong); }
+.LocaleBtn.on {
+  background: var(--AccentDim);
+  border-color: var(--Accent);
+  color: var(--Accent);
+}
+.LocaleBtn:focus-visible { outline: 2px solid var(--Accent); outline-offset: 1px; }
 
 
 
