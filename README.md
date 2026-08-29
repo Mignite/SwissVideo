@@ -50,11 +50,12 @@ Professional desktop video compressor. Lightweight, no-nonsense alternative to H
 - **Node.js** 18+ and **Rust** stable (cargo)
 - **FFmpeg + FFprobe** reachable via one of these (search order in `src-tauri/src/lib.rs:find_tool`):
   1. On `PATH` (`ffmpeg --help` should work)
-  2. `C:\ffmpeg\bin\ffmpeg.exe` / `ffprobe.exe`
-  3. `C:\Program Files\ffmpeg\bin\`
-  4. `C:\Program Files (x86)\ffmpeg\bin\`
+  2. Windows: `C:\ffmpeg\bin\ffmpeg.exe` / `ffprobe.exe`
+  3. Windows: `C:\Program Files\ffmpeg\bin\`
+  4. Windows: `C:\Program Files (x86)\ffmpeg\bin\`
+  5. Linux: `/usr/bin/ffmpeg` / `/usr/local/bin/ffmpeg`
 
-> Verify with `ffmpeg -encoders | findstr nvenc` and `ffprobe -version`. If not on PATH, install from [ffmpeg.org](https://ffmpeg.org/download.html) or via `choco install ffmpeg` / `scoop install ffmpeg`.
+> Verify with `ffmpeg -encoders` (busca `nvenc`/`amf`/`qsv`) y `ffprobe -version`. Windows: `choco install ffmpeg` / `scoop install ffmpeg`. Linux: `sudo pacman -S ffmpeg` (Arch) / `sudo apt install ffmpeg` (Debian).
 
 ## Installation & Usage
 
@@ -82,6 +83,28 @@ cargo test
 ```
 
 Expected `cargo test` (17 tests): `atomic_write_json`, `ProgressThrottle`, FFmpeg progress parsing, per-track volume and flexible `audio_volumes` deserialization (map or array).
+
+### Linux (build nativo, sin instalador)
+
+No hay instalador para Linux: compila el binario nativo, que usa el `webkit2gtk-4.1` de tu sistema (requiere Node 18+, Rust, FFmpeg/FFprobe en `PATH`).
+
+```bash
+# Arch / CachyOS
+sudo pacman -S base-devel rust webkit2gtk-4.1 gtk3 nodejs npm ffmpeg
+
+# Debian / Ubuntu
+sudo apt install build-essential rustc cargo libwebkit2gtk-4.1-dev libgtk-3-dev nodejs npm ffmpeg
+
+# Build
+git clone https://github.com/Mignite/SwissVideo.git
+cd SwissVideo
+npm install
+npm run tauri build   # binario en src-tauri/target/release/swissvideo-v2
+# ejecutar:
+./src-tauri/target/release/swissvideo-v2
+```
+
+> Si solo quieres la app, no el paquete: `cargo build --release` y corre `src-tauri/target/release/swissvideo-v2`. Compila el binario contra tu webkit del sistema, así que no arrastra una copia embebida.
 
 ## File Structure
 
